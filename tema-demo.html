@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  KocTakip — TEMA MIMARISI DEMOSU  (Varyant 9 · token-tabanli)
+  ============================================================================
+  BACKEND TESLIM NOTU (arkadaslar icin):
+  - Tum renk/font degerleri CSS degiskeni (custom property). Tasarim hicbir yerde
+    sabit renk kullanmaz; 'bg-brand', 'text-ink', 'font-display' gibi ANLAMSAL
+    siniflar kullanir. Bu siniflar asagidaki :root degiskenlerine baglidir.
+  - MARKA (renk + font)  -> KURUM Ayarlari'ndan (admin). _Layout'a soyle basilir:
+        <html style="--brand:@Model.Kurum.Renk; --font-display:@Model.FontBaslik; --font-body:@Model.FontGovde">
+  - ACIK/KOYU MODE       -> KULLANICI tercihinden. _Layout'a:
+        <html data-theme="@Model.KullaniciTema">   (deger: "light" | "dark")
+  - Yani rebuild/ayri bundle YOK; sadece 2-3 degeri enjekte edersiniz.
+  - GUVENLIK: renk ve font "serbest" degil, KURATORLU listeden secilir (asagida).
+    Durum renkleri (Riskli/Dikkat/Iyi) MARKADAN BAGIMSIZ, sabit anlamsaldir.
+  - Alttaki "Demo Kontrol" paneli SADECE bu demoda vardir; uründe olmayacak.
+  ============================================================================
+-->
+<html lang="tr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KocTakip — Tema Demosu (Varyant 9)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Playfair+Display:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      // Anlamsal renkler -> CSS degiskenlerine baglanir (admin/kullanici bunlari degistirir)
+      colors: {
+        brand: 'var(--brand)', 'brand-strong': 'var(--brand-strong)', 'on-brand': 'var(--on-brand)',
+        accent: 'var(--accent)',
+        bg: 'var(--bg)', surface: 'var(--surface)', 'surface-2': 'var(--surface-2)',
+        ink: 'var(--text)', 'ink-soft': 'var(--text-soft)', line: 'var(--border)',
+        ok: 'var(--ok)', warn: 'var(--warn)', bad: 'var(--bad)',
+      },
+      fontFamily: { display: 'var(--font-display)', body: 'var(--font-body)' }
+    } }
+  }
+</script>
+<style>
+  /* ===== TOKENLAR — ACIK MOD (varsayilan) ===== */
+  :root{
+    /* MARKA (admin/kurum ayarlar) — varsayilan: Varyant 9 orman yesili */
+    --brand: #1e4d3a;
+    --brand-strong: #163d2d;
+    --on-brand: #ffffff;
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+
+    /* NOTR (acik mod) */
+    --bg: #f4f1ea;
+    --surface: #ffffff;
+    --surface-2: #faf8f2;
+    --text: #1b1a17;
+    --text-soft: #6d6a62;
+    --border: #e6e1d5;
+
+    /* Turetilmis */
+    --accent: var(--brand);                                       /* metin/ikon vurgusu */
+    --accent-soft: color-mix(in srgb, var(--brand) 12%, transparent);
+    --brand-line: color-mix(in srgb, var(--brand) 24%, transparent);
+
+    /* Durum (MARKADAN BAGIMSIZ, sabit anlamsal) */
+    --ok: #2f8f5b; --warn: #b8860b; --bad: #a23b3b;
+  }
+  /* ===== TOKENLAR — KOYU MOD ===== */
+  html[data-theme="dark"]{
+    --bg: #14150f;
+    --surface: #1c1e17;
+    --surface-2: #23261d;
+    --text: #ecebe4;
+    --text-soft: #9c9a8f;
+    --border: #2e3126;
+    /* Marka koyuda okunur olsun diye acilir (accent), ama sidebar dolgusu marka kalir */
+    --accent: color-mix(in srgb, var(--brand) 55%, #ffffff);
+    --accent-soft: color-mix(in srgb, var(--brand) 26%, transparent);
+    --on-brand: #ffffff;
+    --ok: #52b880; --warn: #e0b74d; --bad: #d97a7a;
+  }
+
+  html,body{ background: var(--bg); }
+  body{ font-family: var(--font-body); color: var(--text); transition: background .25s, color .25s; }
+  * { transition: background-color .25s, border-color .25s, color .2s; }
+  .font-display{ font-family: var(--font-display); }
+  ::-webkit-scrollbar{ width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb{ background: var(--border); border-radius:8px; }
+  .spark polyline{ stroke: var(--accent); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .nav-a{ color: color-mix(in srgb, var(--on-brand) 78%, transparent); }
+  .nav-a:hover{ background: color-mix(in srgb, #ffffff 8%, transparent); color: var(--on-brand); }
+  .nav-a.active{ background: color-mix(in srgb, #ffffff 12%, transparent); color: var(--on-brand); }
+
+  /* Demo kontrol paneli (URUNDE OLMAYACAK) */
+  #demoPanel{ position:fixed; right:16px; bottom:16px; z-index:90; width:290px; font-family:var(--font-body);
+    background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:0 20px 50px -15px rgba(0,0,0,.35); overflow:hidden; }
+  #demoPanel .dp-head{ background:var(--brand); color:var(--on-brand); padding:10px 14px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:8px; cursor:pointer; }
+  #demoPanel .dp-body{ padding:14px; }
+  .sw{ width:26px; height:26px; border-radius:8px; cursor:pointer; border:2px solid transparent; }
+  .sw.on{ border-color: var(--text); box-shadow:0 0 0 2px var(--surface) inset; }
+  .fbtn{ border:1px solid var(--border); border-radius:9px; padding:7px 10px; font-size:12px; cursor:pointer; background:var(--surface-2); color:var(--text); }
+  .fbtn.on{ border-color:var(--brand); color:var(--brand); font-weight:600; }
+  @media (max-width:1023px){ #demoPanel{ right:8px; bottom:8px; width:calc(100vw - 16px); max-width:320px; } }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="flex min-h-screen">
+
+  <!-- ====== SIDEBAR (marka renkli) ====== -->
+  <aside class="w-64 shrink-0 bg-brand text-on-brand flex flex-col sticky top-0 h-screen">
+    <div class="h-[70px] flex items-center gap-3 px-6" style="border-bottom:1px solid color-mix(in srgb, #ffffff 12%, transparent)">
+      <div class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:color-mix(in srgb,#ffffff 16%,transparent)">
+        <i data-lucide="compass" class="w-5 h-5"></i>
+      </div>
+      <div class="leading-tight">
+        <p class="font-display text-[18px] font-bold">KocTakip</p>
+        <p class="text-[10px] tracking-[.18em] font-medium" style="color:color-mix(in srgb,var(--on-brand) 65%,transparent)">KURUM KONSOLU</p>
+      </div>
+    </div>
+    <nav class="flex-1 py-5 px-3 space-y-1 text-[13.5px] font-medium overflow-y-auto">
+      <p class="px-3 pb-2 text-[10px] tracking-widest" style="color:color-mix(in srgb,var(--on-brand) 55%,transparent)">YÖNETİM</p>
+      <a class="nav-a flex items-center gap-3 px-3 py-2.5 rounded-xl"><i data-lucide="layout-grid" class="w-[18px] h-[18px]"></i> Genel Bakış</a>
+      <a class="nav-a flex items-center gap-3 px-3 py-2.5 rounded-xl">
+        <i data-lucide="users" class="w-[18px] h-[18px]"></i> Öğretmenler <span class="ml-auto text-[11px]" style="color:color-mix(in srgb,var(--on-brand) 60%,transparent)">48</span></a>
+      <a class="nav-a active flex items-center gap-3 px-3 py-2.5 rounded-xl">
+        <i data-lucide="graduation-cap" class="w-[18px] h-[18px]"></i> Öğrenciler <span class="ml-auto text-[11px]" style="color:color-mix(in srgb,var(--on-brand) 75%,transparent)">1.240</span></a>
+      <a class="nav-a flex items-center gap-3 px-3 py-2.5 rounded-xl"><i data-lucide="book-open" class="w-[18px] h-[18px]"></i> Dersler</a>
+      <a class="nav-a flex items-center gap-3 px-3 py-2.5 rounded-xl"><i data-lucide="clipboard-list" class="w-[18px] h-[18px]"></i> Ödevler</a>
+      <a class="nav-a flex items-center gap-3 px-3 py-2.5 rounded-xl"><i data-lucide="bar-chart-3" class="w-[18px] h-[18px]"></i> Denemeler</a>
+      <a class="nav-a flex items-center gap-3 px-3 py-2.5 rounded-xl"><i data-lucide="brain" class="w-[18px] h-[18px]"></i> Psikolojik Testler</a>
+      <a class="nav-a flex items-center gap-3 px-3 py-2.5 rounded-xl"><i data-lucide="calendar-days" class="w-[18px] h-[18px]"></i> Ajanda</a>
+      <p class="px-3 pt-4 pb-2 text-[10px] tracking-widest" style="color:color-mix(in srgb,var(--on-brand) 55%,transparent)">SİSTEM</p>
+      <a class="nav-a flex items-center gap-3 px-3 py-2.5 rounded-xl"><i data-lucide="settings" class="w-[18px] h-[18px]"></i> Kurum Ayarları</a>
+    </nav>
+    <div class="p-3">
+      <div class="rounded-xl p-3" style="background:color-mix(in srgb,#ffffff 10%,transparent)">
+        <p class="text-[10px] tracking-widest" style="color:color-mix(in srgb,var(--on-brand) 60%,transparent)">DÖNEM · 2025–2026</p>
+        <p class="font-display font-semibold text-[14px] mt-0.5">Güz Yarıyılı</p>
+        <div class="h-1.5 mt-2 rounded-full" style="background:color-mix(in srgb,#000 25%,transparent)"><div class="h-full rounded-full" style="width:64%;background:var(--on-brand)"></div></div>
+        <p class="text-[10px] mt-1" style="color:color-mix(in srgb,var(--on-brand) 60%,transparent)">18. hafta / 28 hafta</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ====== MAIN ====== -->
+  <div class="flex-1 min-w-0 flex flex-col">
+    <!-- Topbar -->
+    <header class="h-[70px] shrink-0 flex items-center gap-4 px-6 bg-surface" style="border-bottom:1px solid var(--border)">
+      <div class="hidden sm:flex items-center gap-2 text-[13px] text-ink-soft">
+        <span>Konsol</span><i data-lucide="chevron-right" class="w-4 h-4"></i><span class="text-ink font-medium">Öğrenciler</span>
+      </div>
+      <div class="flex-1 max-w-md ml-auto sm:ml-4">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-ink-soft absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input placeholder="Ad, sınıf, hedef bölüm veya koç ara…" class="w-full rounded-xl pl-9 pr-3 py-2.5 text-[13px] bg-surface-2 text-ink placeholder:text-ink-soft focus:outline-none" style="border:1px solid var(--border)">
+        </div>
+      </div>
+      <button class="relative w-10 h-10 rounded-xl grid place-items-center text-ink-soft bg-surface-2" style="border:1px solid var(--border)">
+        <i data-lucide="bell" class="w-[18px] h-[18px]"></i><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-bad"></span>
+      </button>
+      <div class="flex items-center gap-3 pl-3" style="border-left:1px solid var(--border)">
+        <div class="w-9 h-9 rounded-xl bg-brand text-on-brand grid place-items-center text-[12px] font-bold">EK</div>
+        <div class="hidden md:block leading-tight"><p class="text-[13px] font-semibold text-ink">Elif Kaya</p><p class="text-[11px] text-ink-soft">Kurum Yöneticisi</p></div>
+      </div>
+    </header>
+
+    <main class="flex-1 p-6 space-y-6">
+      <!-- KPI -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="bg-surface rounded-2xl p-5" style="border:1px solid var(--border)">
+          <div class="flex items-center justify-between"><div class="w-10 h-10 rounded-xl grid place-items-center bg-accent-soft"><i data-lucide="graduation-cap" class="w-5 h-5 text-accent"></i></div><span class="text-[12px] font-semibold text-ok">+7,3%</span></div>
+          <p class="mt-3 text-[12px] text-ink-soft">Toplam Öğrenci</p><p class="font-display text-[30px] font-bold text-ink leading-none mt-1">1.240</p>
+        </div>
+        <div class="bg-surface rounded-2xl p-5" style="border:1px solid var(--border)">
+          <div class="flex items-center justify-between"><div class="w-10 h-10 rounded-xl grid place-items-center bg-accent-soft"><i data-lucide="user-check" class="w-5 h-5 text-accent"></i></div><span class="text-[12px] font-semibold text-ok">%96,6</span></div>
+          <p class="mt-3 text-[12px] text-ink-soft">Aktif</p><p class="font-display text-[30px] font-bold text-ink leading-none mt-1">1.198</p>
+        </div>
+        <div class="bg-surface rounded-2xl p-5" style="border:1px solid var(--border)">
+          <div class="flex items-center justify-between"><div class="w-10 h-10 rounded-xl grid place-items-center" style="background:color-mix(in srgb,var(--bad) 14%,transparent)"><i data-lucide="alert-triangle" class="w-5 h-5 text-bad"></i></div><span class="text-[12px] font-semibold text-bad">Takip</span></div>
+          <p class="mt-3 text-[12px] text-ink-soft">Risk Altında</p><p class="font-display text-[30px] font-bold text-bad leading-none mt-1">37</p>
+        </div>
+        <div class="rounded-2xl p-5 bg-brand text-on-brand">
+          <div class="flex items-center justify-between"><div class="w-10 h-10 rounded-xl grid place-items-center" style="background:color-mix(in srgb,#ffffff 16%,transparent)"><i data-lucide="user-plus" class="w-5 h-5"></i></div><span class="text-[12px] font-semibold" style="color:color-mix(in srgb,var(--on-brand) 85%,transparent)">Bu Ay</span></div>
+          <p class="mt-3 text-[12px]" style="color:color-mix(in srgb,var(--on-brand) 75%,transparent)">Bu Ay Eklenen</p><p class="font-display text-[30px] font-bold leading-none mt-1">54</p>
+        </div>
+      </section>
+
+      <!-- Ogrenci listesi -->
+      <section class="bg-surface rounded-2xl overflow-hidden" style="border:1px solid var(--border)">
+        <div class="p-5 flex flex-wrap items-center gap-3" style="border-bottom:1px solid var(--border)">
+          <div><h2 class="font-display text-[18px] font-semibold text-ink">Öğrenci Listesi</h2><p class="text-[12px] text-ink-soft">Bir satıra tıkla, yatay profil kartı açılır</p></div>
+          <div class="flex items-center gap-2 ml-auto">
+            <span class="text-[11px] font-semibold text-ink-soft mr-1">RİSK</span>
+            <span class="px-3 py-1 rounded-full text-[12px] font-semibold text-on-brand" style="background:var(--bad)">Riskli</span>
+            <span class="px-3 py-1 rounded-full text-[12px] font-semibold text-on-brand" style="background:var(--warn)">Dikkat</span>
+            <span class="px-3 py-1 rounded-full text-[12px] font-semibold text-on-brand" style="background:var(--ok)">İyi</span>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-[13px]">
+            <thead><tr class="text-[11px] tracking-wide text-ink-soft" style="background:var(--surface-2)">
+              <th class="px-5 py-3 font-semibold">ÖĞRENCİ</th><th class="px-3 py-3 font-semibold">SINIF</th><th class="px-3 py-3 font-semibold">HEDEF / KOÇ</th><th class="px-3 py-3 font-semibold">TREND</th><th class="px-3 py-3 font-semibold text-right">SON NET</th><th class="px-3 py-3 font-semibold">ÖDEV</th><th class="px-3 py-3 font-semibold">SON GÖRÜŞME</th><th class="px-3 py-3 font-semibold text-right">DURUM</th>
+            </tr></thead>
+            <tbody id="ogrBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ============ DEMO KONTROL (URUNDE OLMAYACAK) ============ -->
+<div id="demoPanel">
+  <div class="dp-head" onclick="var b=document.getElementById('dpBody'); b.style.display = b.style.display==='none'?'block':'none';">
+    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Demo Kontrol
+    <span style="margin-left:auto;opacity:.75;font-weight:400">üründe olmayacak</span>
+  </div>
+  <div class="dp-body" id="dpBody">
+    <p class="text-[11px] font-semibold text-ink-soft mb-2" style="letter-spacing:.04em">KURUM (ADMİN) · MARKA RENGİ</p>
+    <div class="flex flex-wrap gap-2 mb-3" id="swatches"></div>
+    <p class="text-[11px] font-semibold text-ink-soft mb-2" style="letter-spacing:.04em">KURUM (ADMİN) · FONT</p>
+    <div class="flex flex-wrap gap-2 mb-4" id="fonts"></div>
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <p class="text-[11px] font-semibold text-ink-soft mb-2" style="letter-spacing:.04em">KULLANICI · GÖRÜNÜM</p>
+      <div class="flex items-center gap-2">
+        <button class="fbtn on" id="btnLight" onclick="setTheme('light')">☀ Açık</button>
+        <button class="fbtn" id="btnDark" onclick="setTheme('dark')">🌙 Koyu</button>
+      </div>
+    </div>
+    <p class="text-[10.5px] text-ink-soft mt-3" style="line-height:1.5">Gerçekte: <b>renk + font</b> Kurum Ayarları'ndan (admin), <b>açık/koyu</b> kullanıcı tercihinden gelir.</p>
+  </div>
+</div>
+
+<script>
+// ---- Kuratorlu marka renkleri (admin bunlardan secer) ----
+const ACCENTS = [
+  {ad:'Orman Yeşili', hex:'#1e4d3a'}, {ad:'Lacivert', hex:'#1f3a5f'}, {ad:'Bordo', hex:'#6b2737'},
+  {ad:'Petrol', hex:'#0f5f57'}, {ad:'İndigo', hex:'#3f3d9e'}, {ad:'Kiremit', hex:'#9c4322'}
+];
+// ---- Kuratorlu font eslesmeleri ----
+const FONTS = {
+  kurumsal: {ad:'Kurumsal', disp:"'Fraunces', serif", body:"'Inter', sans-serif"},
+  modern:   {ad:'Modern',   disp:"'Space Grotesk', sans-serif", body:"'Inter', sans-serif"},
+  editoryal:{ad:'Editoryal',disp:"'Playfair Display', serif", body:"'Source Sans 3', sans-serif"},
+};
+const R = document.documentElement;
+function setAccent(hex){ R.style.setProperty('--brand', hex);
+  R.style.setProperty('--brand-strong', 'color-mix(in srgb,'+hex+' 82%, black)');
+  document.querySelectorAll('#swatches .sw').forEach(s=>s.classList.toggle('on', s.dataset.hex===hex)); }
+function setFont(key){ var f=FONTS[key]; R.style.setProperty('--font-display', f.disp); R.style.setProperty('--font-body', f.body);
+  document.querySelectorAll('#fonts .fbtn').forEach(b=>b.classList.toggle('on', b.dataset.key===key)); }
+function setTheme(t){ R.dataset.theme=t; document.getElementById('btnLight').classList.toggle('on',t==='light'); document.getElementById('btnDark').classList.toggle('on',t==='dark'); }
+
+// paneli doldur
+document.getElementById('swatches').innerHTML = ACCENTS.map(a=>`<div class="sw" data-hex="${a.hex}" title="${a.ad}" style="background:${a.hex}" onclick="setAccent('${a.hex}')"></div>`).join('');
+document.getElementById('fonts').innerHTML = Object.keys(FONTS).map(k=>`<button class="fbtn" data-key="${k}" onclick="setFont('${k}')">${FONTS[k].ad}</button>`).join('');
+
+// ---- Ogrenci verisi ----
+const spark = d => { const w=58,h=18,mn=Math.min(...d),mx=Math.max(...d),r=(mx-mn)||1; return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${d.map((v,i)=>`${(i/(d.length-1))*w},${(h-((v-mn)/r)*h).toFixed(1)}`).join(' ')}"/></svg>`; };
+const risk = {iyi:['var(--ok)','İyi Durumda'], dikkat:['var(--warn)','Takip Gerekli'], kritik:['var(--bad)','Risk Altında']};
+const ogr = [
+  {ad:'Selin Aydın', ini:'SA', sinif:'10. Sınıf', pt:'Eşit Ağırlık', hedef:'Psikoloji', koc:'Mehmet Ak', net:57, odev:68, gorusme:'5 gün önce', r:'dikkat', tr:[48,52,50,55,53,58,56,57]},
+  {ad:'Mert Demir', ini:'MD', sinif:'11. Sınıf', pt:'Sayısal', hedef:'Bilgisayar Müh.', koc:'Ayşe Şahin', net:45.5, odev:41, gorusme:'3 hafta önce', r:'kritik', tr:[62,58,55,54,50,48,47,45]},
+  {ad:'Zeynep Kaya', ini:'ZK', sinif:'12. Sınıf', pt:'Sayısal', hedef:'Tıp Fakültesi', koc:'Ahmet Yılmaz', net:92.5, odev:96, gorusme:'2 gün önce', r:'iyi', tr:[74,78,81,79,85,88,90,92]},
+  {ad:'Elif Yıldız', ini:'EY', sinif:'12. Sınıf', pt:'Eşit Ağırlık', hedef:'Hukuk', koc:'Ahmet Yılmaz', net:68, odev:74, gorusme:'1 hafta önce', r:'dikkat', tr:[70,66,69,67,71,68,66,68]},
+  {ad:'Can Öztürk', ini:'CO', sinif:'Mezun', pt:'Sayısal', hedef:'Tıp Fakültesi', koc:'Ayşe Şahin', net:104.5, odev:99, gorusme:'Bugün', r:'iyi', tr:[88,91,95,97,99,101,103,104]},
+];
+document.getElementById('ogrBody').innerHTML = ogr.map(o=>{ const [rc,rl]=risk[o.r]; return `
+  <tr style="border-top:1px solid var(--border)" class="hover:bg-surface-2">
+    <td class="px-5 py-3"><div class="flex items-center gap-3"><span class="w-9 h-9 rounded-lg grid place-items-center text-[11px] font-bold text-on-brand" style="background:var(--brand)">${o.ini}</span><span class="font-semibold text-ink">${o.ad}</span></div></td>
+    <td class="px-3 py-3 text-ink-soft">${o.sinif}<div class="text-[11px]" style="opacity:.7">${o.pt}</div></td>
+    <td class="px-3 py-3 text-ink">${o.hedef}<div class="text-[11px] text-ink-soft">${o.koc}</div></td>
+    <td class="px-3 py-3">${spark(o.tr)}</td>
+    <td class="px-3 py-3 text-right font-display font-bold text-ink">${o.net}</td>
+    <td class="px-3 py-3"><div class="flex items-center gap-2"><div class="w-16 h-1.5 rounded-full" style="background:var(--border)"><div class="h-full rounded-full" style="width:${o.odev}%;background:${rc}"></div></div><span class="text-[12px] text-ink-soft">%${o.odev}</span></div></td>
+    <td class="px-3 py-3 text-ink-soft text-[12px]">${o.gorusme}</td>
+    <td class="px-3 py-3 text-right"><span class="px-2.5 py-1 rounded-md text-[12px] font-semibold" style="background:color-mix(in srgb,${rc} 14%,transparent);color:${rc}">${rl}</span></td>
+  </tr>`; }).join('');
+
+lucide.createIcons();
+setAccent('#1e4d3a'); setFont('kurumsal'); setTheme('light');
+</script>
+</body>
+</html>
