@@ -1,0 +1,583 @@
+<!-- 06 — Arc Browser-vari Kompakt: Renkli, yarı saydam kalın kenar çubuğu, belirgin yuvarlatılmış köşeler, havadar ama sıkı yerleşim, eğlenceli ve modern. -->
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KocTakip - Dashboard 06 (Arc-vari)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        arc: { bg: '#e8e8e6', sidebar: '#f0dfd8', sidebarBorder: 'rgba(0,0,0,0.05)', accent: '#e25c3d', card: '#ffffff' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: theme('colors.arc.bg'); color: #1a1a1a; padding: 12px; height: 100vh; overflow: hidden; }
+        /* Main application container imitating Arc's rounded window */
+        .arc-window { background-color: theme('colors.arc.sidebar'); border-radius: 24px; height: 100%; display: flex; overflow: hidden; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.5); border: 1px solid rgba(0,0,0,0.05); }
+        .arc-content { background-color: theme('colors.arc.card'); border-radius: 16px; margin: 8px 8px 8px 0; flex: 1; overflow-y: auto; box-shadow: -2px 0 10px rgba(0,0,0,0.02); display: flex; flex-col; }
+        
+        .card { background-color: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 16px; transition: all 0.2s; }
+        .card:hover { border-color: #e5e5e5; box-shadow: 0 4px 12px rgba(0,0,0,0.03); transform: translateY(-2px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Sidebar active item */
+        .nav-item { position: relative; border-radius: 10px; transition: all 0.2s; }
+        .nav-item.active { background-color: rgba(0,0,0,0.05); font-weight: 600; }
+        .nav-item:hover:not(.active) { background-color: rgba(0,0,0,0.03); }
+
+        /* ============================================================
+           MOBIL (<=1023px) — Tam bir mobil uygulama deneyimi
+           Masaüstü (>=1024px, Tailwind lg) TAMAMEN korunur; buradaki
+           kurallar yalnızca dar ekranlarda geçerlidir. Tek eşik: 1024px.
+           ============================================================ */
+
+        /* Mobil topbar ve drawer bileşenleri varsayılan olarak yalnızca
+           mobilde görünür. Masaüstünde bunlar zaten gizli tutulur. */
+        .mobile-topbar { display: none; }
+        .mobile-scrim { display: none; }
+
+        @media (max-width: 1023px) {
+            /* Pencere çerçevesini kaldır: tam ekran */
+            body { padding: 0; height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: auto; }
+            .arc-window {
+                border-radius: 0;
+                border: none;
+                box-shadow: none;
+                height: auto;
+                min-height: 100vh;
+                display: block;
+                overflow: visible;
+                background-color: #ffffff;
+            }
+            .arc-content {
+                margin: 0;
+                border-radius: 0;
+                box-shadow: none;
+                overflow-y: visible;
+                display: block;
+            }
+
+            /* Mobil topbar görünür ve sabit */
+            .mobile-topbar {
+                display: flex;
+                position: sticky;
+                top: 0;
+                z-index: 40;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 12px 16px;
+                background: rgba(255,255,255,0.92);
+                backdrop-filter: blur(12px);
+                border-bottom: 1px solid #f0f0f0;
+            }
+
+            /* Sidebar -> soldan açılan drawer */
+            .arc-window > aside.arc-sidebar {
+                position: fixed !important;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                height: 100% !important;
+                width: 82% !important;
+                max-width: 320px;
+                z-index: 60;
+                transform: translateX(-100%) !important;
+                transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+                box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+                border-top-right-radius: 20px;
+                border-bottom-right-radius: 20px;
+            }
+            body.drawer-open .arc-window > aside.arc-sidebar {
+                transform: translateX(0) !important;
+            }
+
+            /* Scrim */
+            .mobile-scrim {
+                display: block;
+                position: fixed;
+                inset: 0;
+                z-index: 55;
+                background: rgba(0,0,0,0.45);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            body.drawer-open .mobile-scrim {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            /* Drawer açıkken arka planı kilitle */
+            body.drawer-open { overflow: hidden; }
+
+            /* Header: mobilde daha kompakt, dokunma dostu */
+            .arc-content > header.app-header {
+                padding: 16px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .arc-content > header.app-header h1 { font-size: 1.35rem; }
+
+            /* İçerik gövdesi mobilde tam genişlik, doğal kayan */
+            .arc-content > .content-body {
+                padding: 16px;
+                overflow: visible;
+            }
+
+            /* Dokunma hedefleri >=44px */
+            .app-header button,
+            .mobile-topbar button {
+                min-height: 44px;
+            }
+            .mobile-topbar button { min-width: 44px; }
+
+            /* Aksiyon kartları / tablo yükseklik kısıtını gevşet */
+            .action-card, .table-card { height: auto !important; }
+            .action-scroll { max-height: 320px; }
+
+            /* Masaüstü tablosunu gizle, mobil kart listesini göster */
+            .desktop-table-wrap { display: none !important; }
+            .mobile-card-list { display: flex !important; }
+
+            /* Sepet/araç çubuğu benzeri buton grupları taşmasın */
+            .toolbar-scroll {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                flex-wrap: nowrap;
+            }
+        }
+
+        /* Mobil kart listesi masaüstünde gizli */
+        .mobile-card-list { display: none; }
+    </style>
+</head>
+<body class="font-sans text-[14px] antialiased" x-data="{ drawer: false }"
+      :class="{ 'drawer-open': drawer }"
+      x-init="$watch('drawer', v => { document.body.classList.toggle('drawer-open', v); if(window.lucide) lucide.createIcons(); })">
+
+    <!-- Mobil Scrim (drawer arkası) -->
+    <div class="mobile-scrim" @click="drawer = false"></div>
+
+    <div class="arc-window relative">
+        
+        <!-- Arc Sidebar -->
+        <aside class="arc-sidebar w-[260px] flex flex-col shrink-0 relative bg-gradient-to-b from-[#f2e2dc] to-[#ead3c8]">
+            <!-- Mac-like dots just for aesthetic + mobil kapat butonu -->
+            <div class="flex items-center justify-between p-4 pt-5">
+                <div class="flex gap-2">
+                    <div class="w-3 h-3 rounded-full bg-black/20"></div>
+                    <div class="w-3 h-3 rounded-full bg-black/20"></div>
+                    <div class="w-3 h-3 rounded-full bg-black/20"></div>
+                </div>
+                <!-- Sadece mobilde görünen kapat butonu -->
+                <button class="lg:hidden w-10 h-10 -mr-1 rounded-xl flex items-center justify-center text-black/50 hover:bg-black/5 transition" @click="drawer = false" aria-label="Menüyü kapat">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Profile / Workspace -->
+            <div class="px-4 pb-4">
+                <div class="flex items-center gap-3 bg-white/40 p-2 rounded-xl backdrop-blur-md border border-white/40 shadow-sm cursor-pointer hover:bg-white/50 transition">
+                    <img src="https://ui-avatars.com/api/?name=Ozan+T&background=e25c3d&color=fff" class="w-9 h-9 rounded-lg" />
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm truncate">Ozan'ın Paneli</p>
+                        <p class="text-xs text-black/50 truncate">Premium Hesap</p>
+                    </div>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-black/40"></i>
+                </div>
+            </div>
+
+            <div class="px-4 mb-4">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-black/40 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" placeholder="Komut veya arama (⌘T)" class="w-full bg-black/5 border-none rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-arc-accent/30 focus:bg-white/50 transition-all placeholder:text-black/40" />
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 overflow-y-auto hide-scrollbar px-3 space-y-1">
+                <div class="text-[11px] font-bold text-black/40 uppercase tracking-wider px-2 py-2 mt-2">Favoriler</div>
+                <a href="#" @click="drawer = false" class="nav-item active flex items-center gap-3 px-3 py-2.5 text-black/80">
+                    <div class="w-6 h-6 rounded bg-white shadow-sm flex items-center justify-center text-arc-accent"><i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i></div>
+                    Genel Bakış
+                </a>
+                <a href="#" @click="drawer = false" class="nav-item flex items-center gap-3 px-3 py-2.5 text-black/70">
+                    <div class="w-6 h-6 rounded flex items-center justify-center"><i data-lucide="users" class="w-4 h-4"></i></div>
+                    Öğrencilerim
+                </a>
+                <a href="#" @click="drawer = false" class="nav-item flex items-center gap-3 px-3 py-2.5 text-black/70 relative">
+                    <div class="w-6 h-6 rounded flex items-center justify-center"><i data-lucide="inbox" class="w-4 h-4"></i></div>
+                    Mesajlar
+                    <span class="absolute right-2 bg-arc-accent text-white text-[10px] font-bold px-1.5 rounded-full">3</span>
+                </a>
+                
+                <div class="text-[11px] font-bold text-black/40 uppercase tracking-wider px-2 py-2 mt-4">Analiz & Rapor</div>
+                <a href="#" @click="drawer = false" class="nav-item flex items-center gap-3 px-3 py-2.5 text-black/70">
+                    <span class="text-lg">📊</span>
+                    Deneme Takibi
+                </a>
+                <a href="#" @click="drawer = false" class="nav-item flex items-center gap-3 px-3 py-2.5 text-black/70">
+                    <span class="text-lg">🎯</span>
+                    Hedef/Gerçekleşen
+                </a>
+                <a href="#" @click="drawer = false" class="nav-item flex items-center gap-3 px-3 py-2.5 text-black/70">
+                    <span class="text-lg">🧠</span>
+                    Psikolojik Durum
+                </a>
+            </nav>
+
+            <div class="p-4 mt-auto">
+                <button class="w-full bg-black/10 hover:bg-black/15 text-black/80 font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Yeni Not
+                </button>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="arc-content flex flex-col relative bg-white">
+
+            <!-- MOBIL TOPBAR (yalnızca <=1023px'te görünür) -->
+            <div class="mobile-topbar">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <button class="w-11 h-11 -ml-1 rounded-xl flex items-center justify-center text-gray-700 hover:bg-gray-100 transition shrink-0" @click="drawer = true" aria-label="Menüyü aç">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-8 h-8 rounded-lg bg-arc-accent text-white flex items-center justify-center shrink-0 shadow-sm">
+                            <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                        </div>
+                        <span class="font-bold text-gray-900 truncate">KocTakip</span>
+                    </div>
+                </div>
+                <button class="w-11 h-11 rounded-xl flex items-center justify-center text-gray-700 hover:bg-gray-100 transition shrink-0" aria-label="Ara">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Header -->
+            <header class="app-header flex justify-between items-center p-6 border-b border-gray-100 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+                <div class="flex-1 min-w-0">
+                    <h1 class="text-2xl font-bold tracking-tight text-gray-900 truncate">Güncel Durum</h1>
+                    <p class="text-gray-500 text-sm mt-0.5 truncate">Tüm veriler eş zamanlı güncellenmektedir.</p>
+                </div>
+                
+                <!-- Center Area: Time Filter -->
+                <div class="hidden lg:flex items-center gap-1 bg-gray-50/80 p-1.5 rounded-2xl border border-gray-100 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] shrink-0">
+                    <button class="px-5 py-1.5 bg-white text-arc-accent font-bold text-sm rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-gray-100/50">Bugün</button>
+                    <button class="px-5 py-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100/80 font-semibold text-sm rounded-xl transition-all">Bu Hafta</button>
+                    <button class="px-5 py-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100/80 font-semibold text-sm rounded-xl transition-all">Bu Ay</button>
+                    <div class="w-px h-5 bg-gray-200 mx-2"></div>
+                    <button class="px-4 py-1.5 text-gray-500 hover:text-gray-900 flex items-center gap-2 font-semibold text-sm rounded-xl transition-all">
+                        <i data-lucide="calendar-days" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <div class="flex-1 flex justify-end gap-3 shrink-0">
+                    <button class="hidden sm:flex items-center gap-2 px-4 py-2 bg-arc-accent/10 text-arc-accent font-bold text-sm rounded-xl hover:bg-arc-accent/20 transition-colors">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Yeni Not
+                    </button>
+                    <button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                    </button>
+                    <button class="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center hover:bg-gray-800 shadow-md transition-transform hover:scale-105">
+                        <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Mobil zaman filtresi: yatay kaydırılabilir çip satırı (yalnızca mobilde) -->
+            <div class="lg:hidden px-4 pt-4">
+                <div class="toolbar-scroll hide-scrollbar flex items-center gap-2 overflow-x-auto pb-1">
+                    <button class="px-4 py-2 bg-white text-arc-accent font-bold text-sm rounded-xl border border-gray-200 shadow-sm whitespace-nowrap shrink-0">Bugün</button>
+                    <button class="px-4 py-2 text-gray-600 hover:text-gray-900 bg-gray-50 font-semibold text-sm rounded-xl border border-gray-100 whitespace-nowrap shrink-0">Bu Hafta</button>
+                    <button class="px-4 py-2 text-gray-600 hover:text-gray-900 bg-gray-50 font-semibold text-sm rounded-xl border border-gray-100 whitespace-nowrap shrink-0">Bu Ay</button>
+                    <button class="px-4 py-2 text-gray-600 hover:text-gray-900 bg-gray-50 font-semibold text-sm rounded-xl border border-gray-100 flex items-center gap-2 whitespace-nowrap shrink-0">
+                        <i data-lucide="calendar-days" class="w-4 h-4"></i> Tarih
+                    </button>
+                </div>
+            </div>
+
+            <!-- Scrollable Body -->
+            <div class="content-body flex-1 overflow-y-auto hide-scrollbar p-6">
+                
+                <!-- Bento Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    
+                    <!-- KPI 1 -->
+                    <div class="card p-5 relative overflow-hidden bg-gradient-to-br from-orange-50 to-white">
+                        <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-4">
+                            <i data-lucide="trending-up" class="w-5 h-5"></i>
+                        </div>
+                        <p class="text-gray-500 text-sm font-medium mb-1">Haftalık İlerleme</p>
+                        <h3 class="text-2xl font-bold text-gray-900">%24</h3>
+                        <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-orange-500/10 rounded-full blur-xl"></div>
+                    </div>
+
+                    <!-- KPI 2 -->
+                    <div class="card p-5 relative overflow-hidden bg-gradient-to-br from-blue-50 to-white">
+                        <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-4">
+                            <i data-lucide="check-square" class="w-5 h-5"></i>
+                        </div>
+                        <p class="text-gray-500 text-sm font-medium mb-1">Çözülen Soru</p>
+                        <h3 class="text-2xl font-bold text-gray-900">12,450</h3>
+                        <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-500/10 rounded-full blur-xl"></div>
+                    </div>
+
+                    <!-- Chart Card (Span 2) -->
+                    <div class="card p-5 col-span-2 md:col-span-2 flex flex-col justify-between">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-bold text-gray-900">Deneme Netleri</h3>
+                                <p class="text-xs text-gray-500">Son 4 Türkiye Geneli</p>
+                            </div>
+                            <span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-md">+4.5 Net</span>
+                        </div>
+                        <div id="arcSparkline" class="w-full h-16"></div>
+                    </div>
+
+                </div>
+
+                <!-- Main Content Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Activity / List -->
+                    <div class="action-card card p-6 lg:col-span-1 flex flex-col h-[400px]">
+                        <h3 class="font-bold text-gray-900 mb-4 text-lg">Öncelikli Aksiyonlar</h3>
+                        <div class="action-scroll flex-1 overflow-y-auto hide-scrollbar space-y-3 pr-2">
+                            
+                            <!-- Item -->
+                            <div class="group flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 cursor-pointer transition">
+                                <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-900 group-hover:text-arc-accent transition-colors">Ali K. Düşüşte</h4>
+                                    <p class="text-xs text-gray-500 mt-0.5">Son 3 denemede netleri sürekli azalıyor.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Item -->
+                            <div class="group flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 cursor-pointer transition">
+                                <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                    <i data-lucide="video" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-900 group-hover:text-arc-accent transition-colors">Veli Toplantısı</h4>
+                                    <p class="text-xs text-gray-500 mt-0.5">Zeynep'in ailesi ile durum değerlendirmesi. (15:00)</p>
+                                </div>
+                            </div>
+
+                            <!-- Item -->
+                            <div class="group flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 cursor-pointer transition">
+                                <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                                    <i data-lucide="check" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-gray-900 group-hover:text-arc-accent transition-colors">Haftalık Programlar</h4>
+                                    <p class="text-xs text-gray-500 mt-0.5">Tüm öğrencilerin yeni hafta programı onaylandı.</p>
+                                </div>
+                            </div>
+
+                        </div>
+                        <button class="w-full mt-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition">Tümünü Gör</button>
+                    </div>
+
+                    <!-- Main Data Table / Area -->
+                    <div class="table-card card p-0 lg:col-span-2 overflow-hidden flex flex-col h-[400px]">
+                        <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white">
+                            <h3 class="font-bold text-gray-900 text-lg">Öğrenci Performans Tablosu</h3>
+                            <div class="flex gap-1">
+                                <button class="p-2 rounded-md hover:bg-gray-100 text-gray-500"><i data-lucide="filter" class="w-4 h-4"></i></button>
+                                <button class="p-2 rounded-md hover:bg-gray-100 text-gray-500"><i data-lucide="download" class="w-4 h-4"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Masaüstü tablo görünümü -->
+                        <div class="desktop-table-wrap flex-1 overflow-auto hide-scrollbar bg-gray-50/30">
+                            <table class="w-full text-left">
+                                <thead class="text-xs text-gray-500 bg-gray-50 border-b border-gray-100 sticky top-0 backdrop-blur-md">
+                                    <tr>
+                                        <th class="px-5 py-3 font-semibold">Öğrenci</th>
+                                        <th class="px-5 py-3 font-semibold">Hedef Bölüm</th>
+                                        <th class="px-5 py-3 font-semibold">TYT Net</th>
+                                        <th class="px-5 py-3 font-semibold">Ödev %</th>
+                                        <th class="px-5 py-3 font-semibold text-right">Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm divide-y divide-gray-100">
+                                    <!-- Row 1 -->
+                                    <tr class="hover:bg-white transition-colors group">
+                                        <td class="px-5 py-3 flex items-center gap-3">
+                                            <img src="https://ui-avatars.com/api/?name=Cem+K&background=random" class="w-8 h-8 rounded-full">
+                                            <span class="font-bold text-gray-900 group-hover:text-arc-accent">Cem Karaca</span>
+                                        </td>
+                                        <td class="px-5 py-3 text-gray-600">Tıp Fakültesi</td>
+                                        <td class="px-5 py-3 font-medium">92.5</td>
+                                        <td class="px-5 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-16 h-1.5 bg-gray-200 rounded-full"><div class="h-full bg-green-500 rounded-full" style="width: 100%"></div></div>
+                                                <span class="text-xs text-gray-500">100</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-5 py-3 text-right">
+                                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold">Mükemmel</span>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 2 -->
+                                    <tr class="hover:bg-white transition-colors group">
+                                        <td class="px-5 py-3 flex items-center gap-3">
+                                            <img src="https://ui-avatars.com/api/?name=Aylin+S&background=random" class="w-8 h-8 rounded-full">
+                                            <span class="font-bold text-gray-900 group-hover:text-arc-accent">Aylin Sönmez</span>
+                                        </td>
+                                        <td class="px-5 py-3 text-gray-600">Hukuk</td>
+                                        <td class="px-5 py-3 font-medium">68.0</td>
+                                        <td class="px-5 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-16 h-1.5 bg-gray-200 rounded-full"><div class="h-full bg-yellow-500 rounded-full" style="width: 75%"></div></div>
+                                                <span class="text-xs text-gray-500">75</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-5 py-3 text-right">
+                                            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-md text-xs font-bold">İyi</span>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 3 -->
+                                    <tr class="hover:bg-white transition-colors group">
+                                        <td class="px-5 py-3 flex items-center gap-3">
+                                            <img src="https://ui-avatars.com/api/?name=Efe+D&background=random" class="w-8 h-8 rounded-full">
+                                            <span class="font-bold text-gray-900 group-hover:text-arc-accent">Efe Doğan</span>
+                                        </td>
+                                        <td class="px-5 py-3 text-gray-600">Bilgisayar Müh.</td>
+                                        <td class="px-5 py-3 font-medium text-red-500">45.5 ↓</td>
+                                        <td class="px-5 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-16 h-1.5 bg-gray-200 rounded-full"><div class="h-full bg-red-500 rounded-full" style="width: 40%"></div></div>
+                                                <span class="text-xs text-gray-500">40</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-5 py-3 text-right">
+                                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded-md text-xs font-bold">Riskli</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Mobil kart listesi görünümü (yalnızca <=1023px) -->
+                        <div class="mobile-card-list flex-col gap-3 p-4 bg-gray-50/30">
+                            <!-- Kart 1 -->
+                            <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <img src="https://ui-avatars.com/api/?name=Cem+K&background=random" class="w-10 h-10 rounded-full shrink-0">
+                                        <div class="min-w-0">
+                                            <p class="font-bold text-gray-900 truncate">Cem Karaca</p>
+                                            <p class="text-xs text-gray-500 truncate">Tıp Fakültesi</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-green-100 text-green-700 px-2.5 py-1 rounded-md text-xs font-bold shrink-0">Mükemmel</span>
+                                </div>
+                                <div class="mt-4 flex items-center gap-4">
+                                    <div class="shrink-0">
+                                        <p class="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">TYT Net</p>
+                                        <p class="font-bold text-gray-900">92.5</p>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <p class="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Ödev %</p>
+                                            <span class="text-xs text-gray-500">100</span>
+                                        </div>
+                                        <div class="w-full h-2 bg-gray-200 rounded-full"><div class="h-full bg-green-500 rounded-full" style="width: 100%"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Kart 2 -->
+                            <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <img src="https://ui-avatars.com/api/?name=Aylin+S&background=random" class="w-10 h-10 rounded-full shrink-0">
+                                        <div class="min-w-0">
+                                            <p class="font-bold text-gray-900 truncate">Aylin Sönmez</p>
+                                            <p class="text-xs text-gray-500 truncate">Hukuk</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-md text-xs font-bold shrink-0">İyi</span>
+                                </div>
+                                <div class="mt-4 flex items-center gap-4">
+                                    <div class="shrink-0">
+                                        <p class="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">TYT Net</p>
+                                        <p class="font-bold text-gray-900">68.0</p>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <p class="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Ödev %</p>
+                                            <span class="text-xs text-gray-500">75</span>
+                                        </div>
+                                        <div class="w-full h-2 bg-gray-200 rounded-full"><div class="h-full bg-yellow-500 rounded-full" style="width: 75%"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Kart 3 -->
+                            <div class="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <img src="https://ui-avatars.com/api/?name=Efe+D&background=random" class="w-10 h-10 rounded-full shrink-0">
+                                        <div class="min-w-0">
+                                            <p class="font-bold text-gray-900 truncate">Efe Doğan</p>
+                                            <p class="text-xs text-gray-500 truncate">Bilgisayar Müh.</p>
+                                        </div>
+                                    </div>
+                                    <span class="bg-red-100 text-red-700 px-2.5 py-1 rounded-md text-xs font-bold shrink-0">Riskli</span>
+                                </div>
+                                <div class="mt-4 flex items-center gap-4">
+                                    <div class="shrink-0">
+                                        <p class="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">TYT Net</p>
+                                        <p class="font-bold text-red-500">45.5 ↓</p>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between mb-1">
+                                            <p class="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">Ödev %</p>
+                                            <span class="text-xs text-gray-500">40</span>
+                                        </div>
+                                        <div class="w-full h-2 bg-gray-200 rounded-full"><div class="h-full bg-red-500 rounded-full" style="width: 40%"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Thick, rounded sparkline matching Arc's playful but clean UI
+        const sparkOptions = {
+            series: [{ name: 'Ortalama Net', data: [55, 58, 54, 62, 60, 68, 65, 72] }],
+            chart: { type: 'line', width: '100%', height: 60, sparkline: { enabled: true }, fontFamily: '"Plus Jakarta Sans", sans-serif' },
+            stroke: { curve: 'smooth', width: 4, lineCap: 'round' },
+            colors: ['#e25c3d'], // arc.accent
+            tooltip: { fixed: { enabled: false }, x: { show: false }, marker: { show: false } },
+            dropShadow: { enabled: true, top: 4, left: 0, blur: 4, opacity: 0.1, color: '#e25c3d' },
+            responsive: [{ breakpoint: 1024, options: { chart: { width: '100%' } } }]
+        };
+        new ApexCharts(document.querySelector("#arcSparkline"), sparkOptions).render();
+    </script>
+</body>
+</html>

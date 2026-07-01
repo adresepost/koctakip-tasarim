@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KoçTakip — Yönetici Ana Paneli</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        serif: ['Fraunces', 'Georgia', 'serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'monospace'],
+      },
+      colors: {
+        paper: '#f7f4ef',
+        paperdk: '#efe9df',
+        ink: '#1c1a17',
+        ink2: '#57534d',
+        ink3: '#8a847a',
+        rule: '#ddd6ca',
+        ruledk: '#c8bfae',
+        salmon: '#e8836a',
+        salmondk: '#c85c40',
+        salmontint: '#f7ddd2',
+        teal: '#12564d',
+        tealdk: '#0d3f38',
+        tealtint: '#d5e3e0',
+        gold: '#b08320',
+      }
+    }
+  }
+}
+</script>
+<style>
+  html { -webkit-font-smoothing: antialiased; }
+  body { font-feature-settings: "kern","liga","calt"; }
+  .num { font-family: 'Fraunces', serif; font-variant-numeric: tabular-nums lining-nums; }
+  .tnum { font-variant-numeric: tabular-nums lining-nums; }
+  .drop-cap::first-letter { font-family: 'Fraunces', serif; font-weight: 600; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #efe9df; }
+  ::-webkit-scrollbar-thumb { background: #c8bfae; border: 2px solid #efe9df; }
+  ::-webkit-scrollbar-thumb:hover { background: #b0a894; }
+  .nav-active { position: relative; }
+  .nav-active::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:3px; height:18px; background:#c85c40; }
+  .apexcharts-tooltip { font-family: 'Inter', sans-serif !important; border:1px solid #c8bfae !important; box-shadow:none !important; border-radius:0 !important; background:#f7f4ef !important; }
+  .apexcharts-tooltip-title { background:#efe9df !important; border-bottom:1px solid #c8bfae !important; font-family:'Fraunces',serif !important; font-weight:600 !important; }
+  .rule-t { border-top:1px solid #ddd6ca; }
+  .tick::before{ content:''; display:inline-block; width:6px;height:6px;margin-right:8px;vertical-align:1px; }
+  .flag { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; }
+  input::placeholder{ color:#8a847a; }
+  .barmini{ height:5px; background:#e2dccf; overflow:hidden; }
+  .barmini > i{ display:block;height:100%; }
+
+  /* ================= MOBILE ENHANCEMENTS (<=1023px) ================= */
+  /* Mobile drawer (sidebar off-canvas) — controlled via .drawer-open on body */
+  #mobileDrawer{ transition: transform .28s cubic-bezier(.4,0,.2,1); will-change: transform; }
+  #mobileScrim{ transition: opacity .28s ease; }
+  body.drawer-open{ overflow:hidden; }
+  body.drawer-open #mobileDrawer{ transform: translateX(0); }
+  body.drawer-open #mobileScrim{ opacity:1; pointer-events:auto; }
+
+  /* Card view rows for the performance table on mobile */
+  .perf-card{ display:none; }
+
+  @media (max-width: 1023px){
+    /* Force off-canvas drawer to stay OUT of document flow (beat Tailwind utilities of equal specificity) */
+    #mobileDrawer{ position:fixed !important; width:82% !important; max-width:300px !important; }
+    body:not(.drawer-open) #mobileDrawer{ transform:translateX(-100%) !important; }
+    /* Full-bleed app feel: no framing padding/radius/margins on masthead & main */
+    .masthead-frame{ padding-left:16px; padding-right:16px; }
+    /* Keep charts/cards edge-comfortable but full width */
+    .chart-card{ border-left:0; border-right:0; }
+    /* Bigger touch targets for interactive rows/links */
+    .mnav-link{ min-height:48px; }
+    .touch-btn{ min-height:44px; }
+    /* Horizontal chip scroller for masthead actions */
+    .chip-scroll{ display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px; }
+    .chip-scroll::-webkit-scrollbar{ display:none; }
+    .chip-scroll > *{ flex:0 0 auto; }
+    /* Hide the desktop performance table, show card list */
+    #perfTableWrap{ display:none; }
+    .perf-card{ display:block; }
+    /* ApexCharts safety: never overflow horizontally */
+    .apexcharts-canvas{ max-width:100% !important; }
+  }
+
+  /* On small screens make sure nothing forces horizontal page scroll */
+  @media (max-width: 1023px){
+    html, body{ max-width:100%; overflow-x:hidden; }
+  }
+</style>
+</head>
+<body class="bg-paper text-ink font-sans antialiased">
+
+<!-- ============ MOBILE TOPBAR (only <lg) ============ -->
+<header class="lg:hidden sticky top-0 z-40 bg-paperdk/95 backdrop-blur border-b border-ruledk">
+  <div class="h-14 px-4 flex items-center gap-3">
+    <button id="mobileMenuBtn" class="touch-btn -ml-1 w-11 h-11 flex items-center justify-center text-ink" aria-label="Menüyü aç" aria-controls="mobileDrawer" aria-expanded="false">
+      <i data-lucide="menu" class="w-6 h-6"></i>
+    </button>
+    <div class="flex items-baseline gap-2 flex-1 min-w-0">
+      <span class="font-serif text-[21px] font-black tracking-tight leading-none text-ink truncate">KoçTakip</span>
+    </div>
+    <button id="mobileSearchBtn" class="touch-btn w-11 h-11 flex items-center justify-center text-ink2" aria-label="Ara">
+      <i data-lucide="search" class="w-5 h-5"></i>
+    </button>
+    <button class="touch-btn relative w-11 h-11 flex items-center justify-center text-ink2" aria-label="Bildirimler">
+      <i data-lucide="bell" class="w-5 h-5"></i>
+      <span class="absolute top-1.5 right-1.5 w-4 h-4 bg-salmondk text-white text-[9px] font-bold rounded-full flex items-center justify-center">7</span>
+    </button>
+  </div>
+  <!-- collapsible mobile search bar -->
+  <div id="mobileSearchBar" class="hidden px-4 pb-3">
+    <div class="relative">
+      <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink3"></i>
+      <input type="text" placeholder="Öğrenci, öğretmen veya deneme ara…" aria-label="Ara"
+        class="w-full bg-paper border border-rule focus:border-teal focus:outline-none pl-9 pr-4 py-2.5 text-[14px] text-ink placeholder:text-ink3">
+    </div>
+  </div>
+</header>
+
+<!-- ============ MOBILE DRAWER + SCRIM (only <lg) ============ -->
+<div id="mobileScrim" class="lg:hidden fixed inset-0 z-40 bg-ink/45 opacity-0 pointer-events-none" aria-hidden="true"></div>
+<aside id="mobileDrawer" class="lg:hidden fixed top-0 left-0 z-50 h-full w-[82%] max-w-[300px] -translate-x-full bg-paperdk border-r border-ruledk flex flex-col" role="dialog" aria-modal="true" aria-label="Ana menü">
+  <div class="px-5 py-4 border-b border-ruledk flex items-center justify-between">
+    <div>
+      <div class="flex items-baseline gap-2">
+        <span class="font-serif text-[24px] font-black tracking-tight leading-none text-ink">KoçTakip</span>
+      </div>
+      <div class="flag text-ink3 mt-1.5">Yönetim Terminali · 2025/26</div>
+    </div>
+    <button id="drawerCloseBtn" class="touch-btn w-11 h-11 -mr-2 flex items-center justify-center text-ink2" aria-label="Menüyü kapat">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+  </div>
+  <nav class="flex-1 overflow-y-auto py-4">
+    <div class="px-5 flag text-ink3 mb-2">Panel</div>
+    <a href="#" class="mnav-link nav-active flex items-center gap-3 pl-5 pr-4 py-3 text-ink font-semibold text-[15px] bg-paper/60">
+      <i data-lucide="layout-dashboard" class="w-[18px] h-[18px] text-salmondk"></i> Genel Bakış
+    </a>
+    <a href="#" class="mnav-link flex items-center gap-3 pl-5 pr-4 py-3 text-ink2 hover:text-ink hover:bg-paper/50 text-[15px]">
+      <i data-lucide="users" class="w-[18px] h-[18px]"></i> Öğretmenler
+    </a>
+    <a href="#" class="mnav-link flex items-center gap-3 pl-5 pr-4 py-3 text-ink2 hover:text-ink hover:bg-paper/50 text-[15px]">
+      <i data-lucide="graduation-cap" class="w-[18px] h-[18px]"></i> Öğrenciler
+    </a>
+    <a href="#" class="mnav-link flex items-center gap-3 pl-5 pr-4 py-3 text-ink2 hover:text-ink hover:bg-paper/50 text-[15px]">
+      <i data-lucide="book-open" class="w-[18px] h-[18px]"></i> Dersler
+    </a>
+
+    <div class="px-5 flag text-ink3 mb-2 mt-5">Çalışma</div>
+    <a href="#" class="mnav-link flex items-center gap-3 pl-5 pr-4 py-3 text-ink2 hover:text-ink hover:bg-paper/50 text-[15px]">
+      <i data-lucide="clipboard-list" class="w-[18px] h-[18px]"></i> Ödevler
+    </a>
+    <a href="#" class="mnav-link flex items-center gap-3 pl-5 pr-4 py-3 text-ink2 hover:text-ink hover:bg-paper/50 text-[15px]">
+      <i data-lucide="file-check-2" class="w-[18px] h-[18px]"></i> Denemeler
+    </a>
+    <a href="#" class="mnav-link flex items-center gap-3 pl-5 pr-4 py-3 text-ink2 hover:text-ink hover:bg-paper/50 text-[15px]">
+      <i data-lucide="brain" class="w-[18px] h-[18px]"></i> Psikolojik Testler
+    </a>
+    <a href="#" class="mnav-link flex items-center gap-3 pl-5 pr-4 py-3 text-ink2 hover:text-ink hover:bg-paper/50 text-[15px]">
+      <i data-lucide="calendar-days" class="w-[18px] h-[18px]"></i> Ajanda
+    </a>
+
+    <div class="px-5 flag text-ink3 mb-2 mt-5">Sistem</div>
+    <a href="#" class="mnav-link flex items-center gap-3 pl-5 pr-4 py-3 text-ink2 hover:text-ink hover:bg-paper/50 text-[15px]">
+      <i data-lucide="settings-2" class="w-[18px] h-[18px]"></i> Kurum Ayarları
+    </a>
+  </nav>
+  <div class="px-5 py-4 border-t border-ruledk">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-teal text-paper flex items-center justify-center font-serif font-semibold text-sm shrink-0">EK</div>
+      <div class="min-w-0">
+        <div class="text-[13px] font-semibold text-ink leading-tight truncate">Elif Karaduman</div>
+        <div class="flag text-ink3">Kurum Yöneticisi</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="flex min-h-screen">
+
+  <!-- ============ SIDEBAR (desktop, unchanged) ============ -->
+  <aside class="hidden lg:flex flex-col w-64 shrink-0 bg-paperdk border-r border-ruledk sticky top-0 h-screen">
+    <div class="px-6 py-5 border-b border-ruledk">
+      <div class="flex items-baseline gap-2">
+        <span class="font-serif text-[26px] font-black tracking-tight leading-none text-ink">KoçTakip</span>
+      </div>
+      <div class="flag text-ink3 mt-2">Yönetim Terminali · 2025/26</div>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto py-4">
+      <div class="px-6 flag text-ink3 mb-2">Panel</div>
+      <a href="#" class="nav-active flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink font-semibold text-[14px] bg-paper/60">
+        <i data-lucide="layout-dashboard" class="w-[17px] h-[17px] text-salmondk"></i> Genel Bakış
+      </a>
+      <a href="#" class="flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink2 hover:text-ink hover:bg-paper/50 text-[14px]">
+        <i data-lucide="users" class="w-[17px] h-[17px]"></i> Öğretmenler
+      </a>
+      <a href="#" class="flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink2 hover:text-ink hover:bg-paper/50 text-[14px]">
+        <i data-lucide="graduation-cap" class="w-[17px] h-[17px]"></i> Öğrenciler
+      </a>
+      <a href="#" class="flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink2 hover:text-ink hover:bg-paper/50 text-[14px]">
+        <i data-lucide="book-open" class="w-[17px] h-[17px]"></i> Dersler
+      </a>
+
+      <div class="px-6 flag text-ink3 mb-2 mt-5">Çalışma</div>
+      <a href="#" class="flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink2 hover:text-ink hover:bg-paper/50 text-[14px]">
+        <i data-lucide="clipboard-list" class="w-[17px] h-[17px]"></i> Ödevler
+      </a>
+      <a href="#" class="flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink2 hover:text-ink hover:bg-paper/50 text-[14px]">
+        <i data-lucide="file-check-2" class="w-[17px] h-[17px]"></i> Denemeler
+      </a>
+      <a href="#" class="flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink2 hover:text-ink hover:bg-paper/50 text-[14px]">
+        <i data-lucide="brain" class="w-[17px] h-[17px]"></i> Psikolojik Testler
+      </a>
+      <a href="#" class="flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink2 hover:text-ink hover:bg-paper/50 text-[14px]">
+        <i data-lucide="calendar-days" class="w-[17px] h-[17px]"></i> Ajanda
+      </a>
+
+      <div class="px-6 flag text-ink3 mb-2 mt-5">Sistem</div>
+      <a href="#" class="flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink2 hover:text-ink hover:bg-paper/50 text-[14px]">
+        <i data-lucide="settings-2" class="w-[17px] h-[17px]"></i> Kurum Ayarları
+      </a>
+    </nav>
+
+    <div class="px-6 py-4 border-t border-ruledk">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-teal text-paper flex items-center justify-center font-serif font-semibold text-sm shrink-0">EK</div>
+        <div class="min-w-0">
+          <div class="text-[13px] font-semibold text-ink leading-tight truncate">Elif Karaduman</div>
+          <div class="flag text-ink3">Kurum Yöneticisi</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="flex-1 min-w-0 flex flex-col">
+
+    <!-- TOP BAR (desktop only; mobile uses the mobile topbar above) -->
+    <header class="hidden lg:block sticky top-0 z-20 bg-paper/95 backdrop-blur border-b border-ruledk">
+      <div class="px-5 md:px-8 h-16 flex items-center gap-4">
+        <button class="lg:hidden text-ink2" aria-label="Menü"><i data-lucide="menu" class="w-5 h-5"></i></button>
+        <div class="relative flex-1 max-w-md">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink3"></i>
+          <input type="text" placeholder="Öğrenci, öğretmen veya deneme ara…" aria-label="Ara"
+            class="w-full bg-paperdk border border-rule focus:border-teal focus:outline-none pl-9 pr-4 py-2 text-[13px] text-ink placeholder:text-ink3">
+        </div>
+        <div class="hidden md:flex items-center gap-1 text-[12px] text-ink3 font-mono">
+          <span class="w-1.5 h-1.5 rounded-full bg-teal inline-block"></span> Sistem çevrimiçi
+        </div>
+        <button class="relative text-ink2 hover:text-ink p-2" aria-label="Bildirimler">
+          <i data-lucide="bell" class="w-[18px] h-[18px]"></i>
+          <span class="absolute top-1 right-1 w-4 h-4 bg-salmondk text-white text-[9px] font-bold rounded-full flex items-center justify-center">7</span>
+        </button>
+        <div class="w-px h-6 bg-rule"></div>
+        <button class="flex items-center gap-2 group" aria-label="Kullanıcı menüsü">
+          <div class="w-8 h-8 bg-teal text-paper flex items-center justify-center font-serif font-semibold text-[13px]">EK</div>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-ink3 group-hover:text-ink"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- MASTHEAD -->
+    <div class="masthead-frame px-5 md:px-8 pt-7 pb-5 border-b-2 border-ink">
+      <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <div class="flag text-salmondk mb-2">Yönetici Ana Paneli</div>
+          <h1 class="font-serif text-[32px] sm:text-[38px] md:text-[46px] font-black leading-[0.95] tracking-tight text-ink">Genel Bakış</h1>
+          <p class="text-ink2 text-[14px] mt-2 max-w-xl">Kurumunuzun öğrenci takip, koçluk ve akademik performans göstergelerinin özet bülteni.</p>
+        </div>
+        <div class="md:text-right shrink-0">
+          <div class="font-mono text-[11px] text-ink3 uppercase tracking-widest">1 Temmuz 2026 · Salı</div>
+          <div class="font-serif text-[15px] text-ink mt-1">Bahar Dönemi · 24. Hafta</div>
+          <div class="mt-3 chip-scroll flex md:justify-end gap-2">
+            <button class="touch-btn border border-ink px-3 py-1.5 text-[12px] font-semibold hover:bg-ink hover:text-paper transition-colors whitespace-nowrap">Rapor İndir</button>
+            <button class="touch-btn bg-teal text-paper px-3 py-1.5 text-[12px] font-semibold hover:bg-tealdk transition-colors whitespace-nowrap">Yeni Dönem</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <main class="px-5 md:px-8 py-7 space-y-8 max-w-[1500px]">
+
+      <!-- ============ KPI STRIP (editorial, divided by rules) ============ -->
+      <section aria-label="Ana göstergeler">
+        <div class="grid grid-cols-2 lg:grid-cols-4 border-y border-ink divide-y lg:divide-y-0 divide-x lg:divide-x divide-ruledk">
+          <!-- KPI 1 -->
+          <div class="p-5 lg:pl-0 lg:pr-6">
+            <div class="flex items-center justify-between">
+              <span class="flag text-ink3">Toplam Öğretmen</span>
+              <i data-lucide="users" class="w-4 h-4 text-ink3"></i>
+            </div>
+            <div class="num text-[40px] sm:text-[44px] font-semibold leading-none mt-3 text-ink">48</div>
+            <div class="flex items-center gap-1.5 mt-3 text-[12px]">
+              <span class="inline-flex items-center gap-1 text-teal font-semibold"><i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>+3</span>
+              <span class="text-ink3">bu dönem · 42 aktif</span>
+            </div>
+          </div>
+          <!-- KPI 2 -->
+          <div class="p-5 lg:px-6">
+            <div class="flex items-center justify-between">
+              <span class="flag text-ink3">Toplam Öğrenci</span>
+              <i data-lucide="graduation-cap" class="w-4 h-4 text-ink3"></i>
+            </div>
+            <div class="num text-[40px] sm:text-[44px] font-semibold leading-none mt-3 text-ink">1.240</div>
+            <div class="flex items-center gap-1.5 mt-3 text-[12px]">
+              <span class="inline-flex items-center gap-1 text-teal font-semibold"><i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>+8,4%</span>
+              <span class="text-ink3">geçen döneme göre</span>
+            </div>
+          </div>
+          <!-- KPI 3 -->
+          <div class="p-5 lg:px-6">
+            <div class="flex items-center justify-between">
+              <span class="flag text-ink3">Toplam Ders</span>
+              <i data-lucide="book-open" class="w-4 h-4 text-ink3"></i>
+            </div>
+            <div class="num text-[40px] sm:text-[44px] font-semibold leading-none mt-3 text-ink">12</div>
+            <div class="flex items-center gap-1.5 mt-3 text-[12px]">
+              <span class="inline-flex items-center gap-1 text-ink2 font-semibold"><i data-lucide="minus" class="w-3.5 h-3.5"></i>Sabit</span>
+              <span class="text-ink3">9 zorunlu · 3 seçmeli</span>
+            </div>
+          </div>
+          <!-- KPI 4 -->
+          <div class="p-5 lg:pl-6 lg:pr-0">
+            <div class="flex items-center justify-between">
+              <span class="flag text-ink3">Aktif Kullanıcı</span>
+              <i data-lucide="activity" class="w-4 h-4 text-salmondk"></i>
+            </div>
+            <div class="num text-[40px] sm:text-[44px] font-semibold leading-none mt-3 text-ink">320</div>
+            <div class="flex items-center gap-1.5 mt-3 text-[12px]">
+              <span class="inline-flex items-center gap-1 text-salmondk font-semibold"><i data-lucide="arrow-down-right" class="w-3.5 h-3.5"></i>−12</span>
+              <span class="text-ink3">son 24 saat · %25,8</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ROW: Performance table (wide) + Activity (narrow) ============ -->
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-x-8 gap-y-8">
+
+        <!-- Öğretmen Performans Tablosu -->
+        <div class="xl:col-span-2">
+          <div class="flex items-baseline justify-between border-b border-ink pb-2 mb-1">
+            <h2 class="font-serif text-[22px] font-bold text-ink">Öğretmen Performansı</h2>
+            <a href="#" class="flag text-salmondk hover:text-salmon">Tümü →</a>
+          </div>
+          <p class="text-[12px] text-ink3 mb-4 italic font-serif">Ödev tamamlama ve takip disiplinine göre sıralanmıştır.</p>
+
+          <!-- Desktop / tablet table -->
+          <div id="perfTableWrap" class="overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[520px]">
+              <thead>
+                <tr class="flag text-ink3 border-b border-ruledk">
+                  <th class="py-2 pr-3 font-medium">Ad Soyad</th>
+                  <th class="py-2 px-3 font-medium text-right">Öğrenci</th>
+                  <th class="py-2 px-3 font-medium text-right">Ödev</th>
+                  <th class="py-2 px-3 font-medium w-40">Tamamlama</th>
+                  <th class="py-2 pl-3 font-medium text-right">Geciken</th>
+                </tr>
+              </thead>
+              <tbody class="text-[13.5px]" id="perfBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Mobile card list (populated by JS) -->
+          <div class="perf-card space-y-3" id="perfCards"></div>
+        </div>
+
+        <!-- Son Eklenenler / Aktivite Akışı -->
+        <div class="xl:col-span-1">
+          <div class="flex items-baseline justify-between border-b border-ink pb-2 mb-4">
+            <h2 class="font-serif text-[22px] font-bold text-ink">Son Eklenenler</h2>
+            <span class="flag text-ink3">Canlı</span>
+          </div>
+          <ol class="relative" id="activityFeed"></ol>
+        </div>
+      </section>
+
+      <!-- ============ ROW: Two charts ============ -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Puan Türü Dağılımı -->
+        <div class="chart-card border border-ruledk bg-paperdk/40">
+          <div class="px-5 pt-4 pb-3 border-b border-ruledk flex items-baseline justify-between">
+            <div>
+              <div class="flag text-ink3 mb-1">Alan Dağılımı</div>
+              <h3 class="font-serif text-[19px] font-bold text-ink">Puan Türü Dağılımı</h3>
+            </div>
+            <div class="text-right num text-[15px] text-ink2">1.240 <span class="text-[11px] font-sans text-ink3">öğr.</span></div>
+          </div>
+          <div class="p-3">
+            <div id="scoreChart"></div>
+          </div>
+        </div>
+
+        <!-- Sınıf Dağılımı -->
+        <div class="chart-card border border-ruledk bg-paperdk/40">
+          <div class="px-5 pt-4 pb-3 border-b border-ruledk flex items-baseline justify-between">
+            <div>
+              <div class="flag text-ink3 mb-1">Kademe Dağılımı</div>
+              <h3 class="font-serif text-[19px] font-bold text-ink">Sınıf Dağılımı</h3>
+            </div>
+            <div class="text-right num text-[15px] text-ink2">5 <span class="text-[11px] font-sans text-ink3">kademe</span></div>
+          </div>
+          <div class="p-3">
+            <div id="gradeChart"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ROW: System Health + Regional Map ============ -->
+      <section class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+
+        <!-- Sistem Sağlığı -->
+        <div class="xl:col-span-2">
+          <div class="border-b border-ink pb-2 mb-4">
+            <h2 class="font-serif text-[22px] font-bold text-ink">Sistem Sağlığı</h2>
+          </div>
+          <div class="space-y-0 border border-ruledk divide-y divide-ruledk">
+            <!-- item -->
+            <div class="flex items-center gap-4 p-4">
+              <div class="num text-[30px] font-semibold text-teal leading-none w-16">320</div>
+              <div class="flex-1">
+                <div class="text-[13.5px] font-semibold text-ink">Aktif Kullanıcı</div>
+                <div class="barmini mt-2"><i style="width:78%;background:#12564d"></i></div>
+              </div>
+              <span class="flag text-teal">%78</span>
+            </div>
+            <div class="flex items-center gap-4 p-4">
+              <div class="num text-[30px] font-semibold text-gold leading-none w-16">96</div>
+              <div class="flex-1">
+                <div class="text-[13.5px] font-semibold text-ink">Pasif Öğrenci</div>
+                <div class="barmini mt-2"><i style="width:23%;background:#b08320"></i></div>
+              </div>
+              <span class="flag text-gold">%23</span>
+            </div>
+            <div class="flex items-center gap-4 p-4">
+              <div class="num text-[30px] font-semibold text-salmondk leading-none w-16">6</div>
+              <div class="flex-1">
+                <div class="text-[13.5px] font-semibold text-ink">Pasif Öğretmen</div>
+                <div class="barmini mt-2"><i style="width:12%;background:#c85c40"></i></div>
+              </div>
+              <span class="flag text-salmondk">%12</span>
+            </div>
+            <div class="flex items-center gap-4 p-4">
+              <div class="num text-[30px] font-semibold text-ink2 leading-none w-16">41</div>
+              <div class="flex-1">
+                <div class="text-[13.5px] font-semibold text-ink">Hiç Giriş Yapmayan</div>
+                <div class="barmini mt-2"><i style="width:33%;background:#8a847a"></i></div>
+              </div>
+              <span class="flag text-ink2">%33</span>
+            </div>
+          </div>
+          <p class="text-[12px] text-ink3 mt-3 font-serif italic">Pasiflik ölçütü: son 14 günde giriş yapmamış hesaplar.</p>
+        </div>
+
+        <!-- İl Bazlı Dağılım — MAP PLACEHOLDER -->
+        <div class="xl:col-span-3">
+          <div class="flex items-baseline justify-between border-b border-ink pb-2 mb-4">
+            <h2 class="font-serif text-[22px] font-bold text-ink">İl Bazlı Dağılım</h2>
+            <span class="flag text-ink3">81 İl · Türkiye</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <!-- Map placeholder -->
+            <div class="md:col-span-3">
+              <div class="relative border border-ruledk bg-[repeating-linear-gradient(45deg,#f2ece1,#f2ece1_11px,#efe9df_11px,#efe9df_22px)] aspect-[4/3] flex items-center justify-center overflow-hidden">
+                <!-- decorative dotted graticule -->
+                <svg viewBox="0 0 400 300" class="absolute inset-0 w-full h-full opacity-40" aria-hidden="true">
+                  <defs>
+                    <pattern id="dots" width="18" height="18" patternUnits="userSpaceOnUse">
+                      <circle cx="2" cy="2" r="1" fill="#c8bfae"/>
+                    </pattern>
+                  </defs>
+                  <rect width="400" height="300" fill="url(#dots)"/>
+                </svg>
+                <!-- stylized landmass silhouette hint -->
+                <svg viewBox="0 0 400 200" class="relative w-4/5 opacity-90" aria-hidden="true">
+                  <path d="M40 120 Q70 90 120 100 T210 92 Q260 84 300 100 T370 110 L365 140 Q320 155 270 148 T180 152 Q120 158 80 148 T40 120 Z"
+                        fill="#e2dccf" stroke="#c85c40" stroke-width="1.5" stroke-dasharray="4 3"/>
+                  <circle cx="130" cy="118" r="4" fill="#c85c40"/>
+                  <circle cx="215" cy="120" r="5" fill="#12564d"/>
+                  <circle cx="300" cy="122" r="3.5" fill="#b08320"/>
+                  <circle cx="90" cy="128" r="3" fill="#c85c40"/>
+                </svg>
+                <div class="absolute bottom-3 left-3 flag text-ink3 bg-paper/80 px-2 py-1 border border-rule">Harita · yakında gömülecek</div>
+              </div>
+              <!-- Legend -->
+              <div class="flex flex-wrap items-center gap-x-5 gap-y-1 mt-3 text-[11px] text-ink2">
+                <span class="flag text-ink3">Yoğunluk:</span>
+                <span class="tick" style="--c:1"><span class="inline-block w-2.5 h-2.5 mr-1.5 align-middle" style="background:#f7ddd2"></span>Düşük</span>
+                <span><span class="inline-block w-2.5 h-2.5 mr-1.5 align-middle" style="background:#e8836a"></span>Orta</span>
+                <span><span class="inline-block w-2.5 h-2.5 mr-1.5 align-middle" style="background:#c85c40"></span>Yüksek</span>
+                <span><span class="inline-block w-2.5 h-2.5 mr-1.5 align-middle" style="background:#12564d"></span>Çok yüksek</span>
+              </div>
+            </div>
+
+            <!-- En yoğun iller -->
+            <div class="md:col-span-2">
+              <div class="flag text-ink3 mb-3">En Yoğun İller</div>
+              <ol class="divide-y divide-ruledk border-t border-ruledk" id="cityList"></ol>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOTER RULE -->
+      <footer class="rule-t border-ink pt-4 pb-8 flex flex-col md:flex-row md:items-center justify-between gap-2 text-[11px] text-ink3">
+        <div class="font-mono uppercase tracking-widest">KoçTakip · Yönetim Terminali v4.2</div>
+        <div class="font-serif italic">Son güncelleme: 1 Temmuz 2026, 09:14 · Otomatik senkron aktif</div>
+      </footer>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  // ---- DATA ----
+  const teachers = [
+    { name:'Ayşe Demirtaş',    branch:'Matematik',  students:64, done:412, assigned:440, late:9  },
+    { name:'Mehmet Aksoy',     branch:'Türkçe',     students:58, done:388, assigned:430, late:14 },
+    { name:'Zeynep Yıldırım',  branch:'Fizik',      students:41, done:301, assigned:315, late:5  },
+    { name:'Burak Çetinkaya',  branch:'Kimya',      students:47, done:266, assigned:340, late:22 },
+    { name:'Elif Şahin',       branch:'Biyoloji',   students:52, done:344, assigned:360, late:7  },
+    { name:'Kaan Öztürk',      branch:'Tarih',      students:39, done:198, assigned:280, late:31 },
+    { name:'Selin Arslan',     branch:'İngilizce',  students:55, done:371, assigned:395, late:11 },
+    { name:'Onur Kılıç',       branch:'Coğrafya',   students:44, done:289, assigned:305, late:6  },
+  ];
+
+  const perfBody = document.getElementById('perfBody');
+  const perfCards = document.getElementById('perfCards');
+  teachers.forEach((t,i)=>{
+    const rate = Math.round(t.done / t.assigned * 100);
+    let barColor = '#12564d', txt='text-teal';
+    if(rate < 75){ barColor='#c85c40'; txt='text-salmondk'; }
+    else if(rate < 88){ barColor='#b08320'; txt='text-gold'; }
+    const lateCls = t.late >= 20 ? 'text-salmondk font-semibold' : (t.late >= 10 ? 'text-gold' : 'text-ink2');
+    const initials = t.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+
+    // ---- desktop / tablet table row ----
+    const tr = document.createElement('tr');
+    tr.className = 'border-b border-rule hover:bg-paperdk/50 transition-colors';
+    tr.innerHTML = `
+      <td class="py-3 pr-3">
+        <div class="flex items-center gap-3">
+          <span class="num text-ink3 text-[12px] w-4 text-right">${String(i+1).padStart(2,'0')}</span>
+          <span class="w-8 h-8 shrink-0 bg-paperdk border border-ruledk flex items-center justify-center font-serif font-semibold text-[12px] text-ink">${initials}</span>
+          <span>
+            <span class="block font-semibold text-ink leading-tight">${t.name}</span>
+            <span class="block flag text-ink3">${t.branch}</span>
+          </span>
+        </div>
+      </td>
+      <td class="py-3 px-3 text-right tnum text-ink2">${t.students}</td>
+      <td class="py-3 px-3 text-right tnum text-ink2">${t.done}<span class="text-ink3">/${t.assigned}</span></td>
+      <td class="py-3 px-3">
+        <div class="flex items-center gap-2">
+          <div class="barmini flex-1"><i style="width:${rate}%;background:${barColor}"></i></div>
+          <span class="num ${txt} text-[14px] font-semibold w-9 text-right">%${rate}</span>
+        </div>
+      </td>
+      <td class="py-3 pl-3 text-right tnum ${lateCls}">${t.late}</td>`;
+    perfBody.appendChild(tr);
+
+    // ---- mobile card ----
+    const card = document.createElement('div');
+    card.className = 'border border-ruledk bg-paperdk/40 p-4';
+    card.innerHTML = `
+      <div class="flex items-center gap-3">
+        <span class="num text-ink3 text-[12px] w-5 text-right shrink-0">${String(i+1).padStart(2,'0')}</span>
+        <span class="w-9 h-9 shrink-0 bg-paperdk border border-ruledk flex items-center justify-center font-serif font-semibold text-[13px] text-ink">${initials}</span>
+        <span class="min-w-0 flex-1">
+          <span class="block font-semibold text-ink leading-tight truncate">${t.name}</span>
+          <span class="block flag text-ink3">${t.branch}</span>
+        </span>
+        <span class="num ${txt} text-[18px] font-semibold shrink-0">%${rate}</span>
+      </div>
+      <div class="barmini mt-3"><i style="width:${rate}%;background:${barColor}"></i></div>
+      <div class="flex items-center justify-between mt-3 text-[12.5px]">
+        <span class="text-ink3">Öğrenci <span class="tnum text-ink2 font-semibold">${t.students}</span></span>
+        <span class="text-ink3">Ödev <span class="tnum text-ink2 font-semibold">${t.done}/${t.assigned}</span></span>
+        <span class="text-ink3">Geciken <span class="tnum ${lateCls}">${t.late}</span></span>
+      </div>`;
+    perfCards.appendChild(card);
+  });
+
+  // ---- ACTIVITY FEED ----
+  const activity = [
+    { icon:'user-plus',   color:'#12564d', title:'Yeni öğrenci kaydı', desc:'Deniz Yücel · 11-B · Sayısal', time:'8 dk önce' },
+    { icon:'file-check-2', color:'#c85c40', title:'Deneme yayınlandı',   desc:'TYT Genel Deneme #14 · 320 katılım', time:'26 dk önce' },
+    { icon:'clipboard-list', color:'#b08320', title:'Ödev atandı',       desc:'Türev — 40 soru · 9-A / 9-C', time:'1 sa önce' },
+    { icon:'brain',       color:'#12564d', title:'Psikolojik test tamamlandı', desc:'Sınav Kaygısı Ölçeği · 48 öğrenci', time:'2 sa önce' },
+    { icon:'user-plus',   color:'#12564d', title:'Yeni öğretmen', desc:'Onur Kılıç · Coğrafya', time:'3 sa önce' },
+    { icon:'calendar-days', color:'#8a847a', title:'Ajanda güncellendi', desc:'Veli görüşmeleri · 4 Temmuz', time:'Dün' },
+  ];
+  const feed = document.getElementById('activityFeed');
+  activity.forEach((a,i)=>{
+    const li = document.createElement('li');
+    li.className = 'flex gap-3 pb-4 mb-4 ' + (i < activity.length-1 ? 'border-b border-rule' : '');
+    li.innerHTML = `
+      <span class="mt-0.5 w-7 h-7 shrink-0 flex items-center justify-center border border-ruledk bg-paperdk" style="color:${a.color}">
+        <i data-lucide="${a.icon}" class="w-[15px] h-[15px]"></i>
+      </span>
+      <div class="min-w-0">
+        <div class="text-[13.5px] font-semibold text-ink leading-tight">${a.title}</div>
+        <div class="text-[12.5px] text-ink2 truncate">${a.desc}</div>
+        <div class="flag text-ink3 mt-0.5">${a.time}</div>
+      </div>`;
+    feed.appendChild(li);
+  });
+
+  // ---- CITY LIST ----
+  const cities = [
+    { name:'İstanbul', count:312, pct:100 },
+    { name:'Ankara',   count:186, pct:60 },
+    { name:'İzmir',    count:141, pct:45 },
+    { name:'Bursa',    count:98,  pct:31 },
+    { name:'Antalya',  count:74,  pct:24 },
+    { name:'Konya',    count:63,  pct:20 },
+  ];
+  const cityList = document.getElementById('cityList');
+  cities.forEach((c,i)=>{
+    const li = document.createElement('li');
+    li.className = 'flex items-center gap-3 py-2.5';
+    li.innerHTML = `
+      <span class="num text-[13px] text-ink3 w-5">${i+1}</span>
+      <span class="text-[13.5px] font-semibold text-ink flex-1">${c.name}</span>
+      <span class="barmini w-16 hidden sm:block"><i style="width:${c.pct}%;background:${i===0?'#12564d':i<3?'#c85c40':'#e8836a'}"></i></span>
+      <span class="num text-[15px] font-semibold text-ink w-10 text-right">${c.count}</span>`;
+    cityList.appendChild(li);
+  });
+
+  // ---- CHART THEME ----
+  const paletteWarm = ['#12564d','#c85c40','#b08320','#7a9c96'];
+  const gridColor = '#ddd6ca';
+  const inkColor = '#1c1a17';
+  const ink2Color = '#57534d';
+  const baseFont = 'Inter, sans-serif';
+
+  // Puan Türü — horizontal bar (editorial)
+  new ApexCharts(document.querySelector('#scoreChart'), {
+    chart:{ type:'bar', height:290, fontFamily:baseFont, toolbar:{show:false}, background:'transparent' },
+    series:[{ name:'Öğrenci', data:[452,318,336,134] }],
+    xaxis:{ categories:['Sayısal','Sözel','Eşit Ağırlık','Dil'],
+      labels:{ style:{ colors:ink2Color, fontSize:'12px', fontWeight:600 } },
+      axisBorder:{ color:gridColor }, axisTicks:{ color:gridColor } },
+    yaxis:{ labels:{ style:{ colors:ink2Color, fontSize:'12px' } } },
+    plotOptions:{ bar:{ horizontal:true, barHeight:'56%', borderRadius:0, distributed:true,
+      dataLabels:{ position:'top' } } },
+    colors:paletteWarm,
+    dataLabels:{ enabled:true, textAnchor:'start', offsetX:8,
+      style:{ fontFamily:'Fraunces, serif', fontSize:'14px', fontWeight:600, colors:[inkColor] },
+      formatter:(v)=>v },
+    grid:{ borderColor:gridColor, strokeDashArray:0, xaxis:{lines:{show:true}}, yaxis:{lines:{show:false}}, padding:{left:6,right:24} },
+    legend:{ show:false },
+    tooltip:{ y:{ formatter:(v)=>v+' öğrenci' } },
+    responsive:[{ breakpoint:1024, options:{
+      chart:{ height:260 },
+      plotOptions:{ bar:{ barHeight:'52%' } },
+      dataLabels:{ style:{ fontSize:'13px' } },
+      xaxis:{ labels:{ style:{ fontSize:'11px' } } },
+      yaxis:{ labels:{ style:{ fontSize:'11px' } } }
+    } }]
+  }).render();
+
+  // Sınıf Dağılımı — vertical columns
+  new ApexCharts(document.querySelector('#gradeChart'), {
+    chart:{ type:'bar', height:290, fontFamily:baseFont, toolbar:{show:false}, background:'transparent' },
+    series:[{ name:'Öğrenci', data:[214,258,301,352,115] }],
+    xaxis:{ categories:['9. Sınıf','10. Sınıf','11. Sınıf','12. Sınıf','Mezun'],
+      labels:{ style:{ colors:ink2Color, fontSize:'12px', fontWeight:600 } },
+      axisBorder:{ color:gridColor }, axisTicks:{ color:gridColor } },
+    yaxis:{ labels:{ style:{ colors:ink2Color, fontSize:'12px' } } },
+    plotOptions:{ bar:{ horizontal:false, columnWidth:'46%', borderRadius:0,
+      dataLabels:{ position:'top' } } },
+    colors:['#12564d'],
+    fill:{ opacity:1 },
+    states:{ hover:{ filter:{ type:'darken', value:0.9 } } },
+    dataLabels:{ enabled:true, offsetY:-20,
+      style:{ fontFamily:'Fraunces, serif', fontSize:'13px', fontWeight:600, colors:[inkColor] } },
+    grid:{ borderColor:gridColor, strokeDashArray:0, padding:{top:6} },
+    legend:{ show:false },
+    tooltip:{ y:{ formatter:(v)=>v+' öğrenci' } },
+    responsive:[{ breakpoint:1024, options:{
+      chart:{ height:260 },
+      plotOptions:{ bar:{ columnWidth:'56%' } },
+      dataLabels:{ offsetY:-16, style:{ fontSize:'11px' } },
+      xaxis:{ labels:{ style:{ fontSize:'10.5px' }, rotate:-35, rotateAlways:true, hideOverlappingLabels:false } },
+      yaxis:{ labels:{ style:{ fontSize:'11px' } } }
+    } }]
+  }).render();
+
+  // ---- MOBILE DRAWER LOGIC ----
+  (function(){
+    const body = document.body;
+    const drawer = document.getElementById('mobileDrawer');
+    const openBtn = document.getElementById('mobileMenuBtn');
+    const closeBtn = document.getElementById('drawerCloseBtn');
+    const scrim = document.getElementById('mobileScrim');
+    const searchBtn = document.getElementById('mobileSearchBtn');
+    const searchBar = document.getElementById('mobileSearchBar');
+
+    function openDrawer(){
+      body.classList.add('drawer-open');
+      if(openBtn) openBtn.setAttribute('aria-expanded','true');
+      if(scrim) scrim.setAttribute('aria-hidden','false');
+    }
+    function closeDrawer(){
+      body.classList.remove('drawer-open');
+      if(openBtn) openBtn.setAttribute('aria-expanded','false');
+      if(scrim) scrim.setAttribute('aria-hidden','true');
+    }
+    if(openBtn) openBtn.addEventListener('click', openDrawer);
+    if(closeBtn) closeBtn.addEventListener('click', closeDrawer);
+    if(scrim) scrim.addEventListener('click', closeDrawer);
+    // close when a menu item is tapped
+    drawer.querySelectorAll('.mnav-link').forEach(a=>a.addEventListener('click', closeDrawer));
+    // ESC closes
+    document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeDrawer(); });
+    // auto-close if resized up to desktop
+    window.addEventListener('resize', ()=>{ if(window.innerWidth >= 1024) closeDrawer(); });
+
+    // mobile search toggle
+    if(searchBtn && searchBar){
+      searchBtn.addEventListener('click', ()=>{
+        const hidden = searchBar.classList.toggle('hidden');
+        if(!hidden){
+          const inp = searchBar.querySelector('input');
+          if(inp) inp.focus();
+        }
+      });
+    }
+  })();
+
+  // ---- render icons ----
+  lucide.createIcons();
+</script>
+</body>
+</html>

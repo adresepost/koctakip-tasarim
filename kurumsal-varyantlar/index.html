@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KocTakip — Kurumsal Tasarım Varyantları</title>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Hanken Grotesk',sans-serif;background:#fafafa;color:#0a0a0a;padding:56px 24px;min-height:100vh;}
+  .wrap{max-width:1100px;margin:0 auto;}
+  h1{font-size:28px;font-weight:800;letter-spacing:-0.04em;}
+  .sub{color:#6b6b6b;margin-top:6px;font-size:14px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0;margin-top:36px;border-top:1px solid #0a0a0a;border-left:1px solid #e4e4e4;}
+  .card{display:block;text-decoration:none;color:inherit;background:#fff;border-right:1px solid #e4e4e4;border-bottom:1px solid #e4e4e4;padding:24px;transition:.15s;}
+  .card:hover{background:#0a0a0a;color:#fff;}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.18em;color:#c0392b;text-transform:uppercase;}
+  .card h2{font-size:17px;font-weight:700;margin-top:10px;letter-spacing:-0.02em;}
+  .notes{color:#6b6b6b;font-size:13px;line-height:1.6;margin-top:10px;min-height:76px;}
+  .card:hover .notes{color:#cfcfcf;}
+  .pal{font-size:10.5px;color:#9a9a9a;font-family:monospace;margin-top:10px;border-top:1px solid #eee;padding-top:10px;line-height:1.5;}
+  .card:hover .pal{border-color:#333;color:#999;}
+  .open{margin-top:14px;font-size:13px;font-weight:700;}
+  .open span{display:inline-block;transition:.15s;}
+  .card:hover .open span{transform:translateX(5px);}
+</style></head>
+<body><div class="wrap">
+  <h1>KocTakip — Kurumsal Tasarım Varyantları</h1>
+  <p class="sub">Yönetici paneli · anti-klişe, editoryal/kurumsal · birini seç, gerçek /Home'a bağlayalım</p>
+  <div class="grid">
+    <a href="./k1-swiss.html" class="card">
+      <div class="tag">Kurumsal 1</div>
+      <h2>Swiss / Uluslararasi Tipografik</h2>
+      <p class="notes">Bir premium basili yillik raporun editoryal disiplini panele tasinmis: asimetrik grid, kural cizgileri, indeks numaralari (01-04) ve kahraman sayilar kimligi tasiyor. Kirmizi murekkep sadece vurgu ve negatif deltalarda kullanildi; geri kalan her sey siyah-beyaz ritim.</p>
+      <div class="pal">Zemin saf beyaz #ffffff / kagit #fafafa. Murekkep: siyah #0a0a0a + koyu kirmizi #c0392b. Font: Hanken Grotesk (baslik/govde/sayilar).</div>
+      <div class="open">Aç <span>&rarr;</span></div>
+    </a>
+
+    <a href="./k2-editorial.html" class="card">
+      <div class="tag">Kurumsal 2</div>
+      <h2>Editoryal Broadsheet (FT tarzi)</h2>
+      <p class="notes">Financial Times havasinda kurumsal gazete estetigi: sicak krem kagit zemin, Fraunces serif basliklar + Inter govde, koyu somon ve petrol yesili accent. Ince kurallarla ayrilmis kolon-tabanli editoryal grid; KPI'lar dikey cizgilerle bolunmus "masthead" seridi gibi. Klise gradient/glassmorphism/emoji YOK — bunun yerine tipografik disiplin ve tabular sayilar.</p>
+      <div class="pal">Zemin krem kagit #f7f4ef + koyu somon #c85c40 (accent) + petrol yesili #12564d; Fraunces serif basliklar, Inter govde, IBM Plex Mono etiketler</div>
+      <div class="open">Aç <span>&rarr;</span></div>
+    </a>
+
+    <a href="./k3-graphite.html" class="card">
+      <div class="tag">Kurumsal 3</div>
+      <h2>Kurumsal Graphite (operasyon konsolu)</h2>
+      <p class="notes">Palantir/enterprise-ops havasinda, celik-grafit yuzeyler ve ince cizgi kurallariyla susuz bir yonetim konsolu. Amber tek sinyal rengi; sayilar IBM Plex Mono ile veri hissi veriyor. Simetrik "4 KPI + donut + tablo" kalibi yerine asimetrik yapisal panel dizilimi kullandim.</p>
+      <div class="pal">Zemin #16181b/#1b1e22, panel #22262b, cizgi #33373d; accent amber #e0a458 + ikincil celik-mavi #6b93b8; font IBM Plex Sans + IBM Plex Mono</div>
+      <div class="open">Aç <span>&rarr;</span></div>
+    </a>
+
+    <a href="./k4-brand.html" class="card">
+      <div class="tag">Kurumsal 4</div>
+      <h2>Marka-Odakli Kurumsal</h2>
+      <p class="notes">Bu tasarim koyu orman yesili (#1e4d3a) marka rengiyle kendine ait bir kimlik kuruyor; altin (#b08128) ve bordo vurgular, Bricolage Grotesque display + Instrument Serif italik detaylariyla editoryal bir "usta isi" hissi veriyor. Simetrik AI-kalibi yerine asimetrik grid, ince kurallar ve guclu rakamlar hakim.</p>
+      <div class="pal">Zemin: kagit kremi (#f7f5ef) + kart (#fffdf8). Accent: orman yesili #1e4d3a + altin #b08128 + bordo #6b2737. Font: Bricolage Grotesque (display) / Instrument Serif (vurgu) / DM Sans (govde).</div>
+      <div class="open">Aç <span>&rarr;</span></div>
+    </a>
+  </div>
+</div></body></html>

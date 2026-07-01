@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KocTakip — Koyu Tasarım Varyantları</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Inter,sans-serif;background:#0a0b0d;color:#e5e7eb;padding:48px 24px;min-height:100vh;}
+  .wrap{max-width:1100px;margin:0 auto;}
+  h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;}
+  .sub{color:#8b8f98;margin-top:6px;font-size:14px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:32px;}
+  .card{display:block;text-decoration:none;color:inherit;background:#111317;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:22px;transition:.18s;}
+  .card:hover{border-color:rgba(255,255,255,0.2);transform:translateY(-3px);background:#15181d;}
+  .tag{font-size:11px;font-weight:600;color:#10b981;text-transform:uppercase;letter-spacing:.06em;}
+  .card h2{font-size:17px;font-weight:600;margin-top:8px;color:#f3f4f6;}
+  .notes{color:#9ca3af;font-size:13px;line-height:1.6;margin-top:8px;min-height:60px;}
+  .pal{font-size:11px;color:#6b7280;font-family:monospace;margin-top:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;}
+  .open{margin-top:14px;font-size:13px;font-weight:600;color:#e5e7eb;}
+  .open span{transition:.18s;display:inline-block;}
+  .card:hover .open span{transform:translateX(4px);}
+</style></head>
+<body><div class="wrap">
+  <h1>KocTakip — Koyu Tasarım Varyantları</h1>
+  <p class="sub">Yönetici paneli · 4 farklı karakter · birini seç, gerçek /Home'a bağlayalım</p>
+  <div class="grid">
+    <a href="./v1-observability.html" class="card">
+      <div class="tag">Varyant 1</div>
+      <h2>Observability / Terminal Dark</h2>
+      <p class="notes">Grafana/observability karakteri: neredeyse-siyah zemin, tek emerald accent, ince beyaz %6 borderlar, monospace sayilar ve grid-bg dokusu. Cok bilgi yogun ama sakin ve teknik; sparkline'li KPI'lar, canli akis rozetleri ve olcekli harita placeholder ile diger varyantlardan net ayrisiyor.</p>
+      <div class="pal">bg #0a0b0d / panel #111317 / accent emerald #10b981</div>
+      <div class="open">Aç <span>&rarr;</span></div>
+    </a>
+
+    <a href="./v2-slate-executive.html" class="card">
+      <div class="tag">Varyant 2</div>
+      <h2>Slate Executive</h2>
+      <p class="notes">C-level guven veren kurumsal his: derin slate-navy zeminde amber/altin accent, yumusak golgeli bento kartlar. Yuksek veri yogunlugu (KPI + performans tablosu + iki grafik + sistem sagligi + il haritasi + canli akis) ama sakin, net hiyerarsi. Harita alani olcekli, grid dokulu koyu placeholder olarak hazir.</p>
+      <div class="pal">Arka plan #0f172a / #1e293b slate-navy, accent amber #f59e0b + altin #fbbf24, metin slate-100/400</div>
+      <div class="open">Aç <span>&rarr;</span></div>
+    </a>
+
+    <a href="./v3-cockpit.html" class="card">
+      <div class="tag">Varyant 3</div>
+      <h2>Data Cockpit (ultra-dense)</h2>
+      <p class="notes">Bloomberg terminal DNA'si: 8px scrollbar, JetBrains Mono rakamlar, canli saat + ticker seridi, siki 12-kolon grid ve minik tipografi ile "her piksel sinyal" hissi. Indigo accent koyu #0b1020 zemin uzerinde kokpit kontrolu veriyor.</p>
+      <div class="pal">arka plan #0b1020 / panel #0f1629 / accent indigo #6366f1</div>
+      <div class="open">Aç <span>&rarr;</span></div>
+    </a>
+
+    <a href="./v4-linear-dark.html" class="card">
+      <div class="tag">Varyant 4</div>
+      <h2>Linear Dark SaaS</h2>
+      <p class="notes">Linear tarzi charcoal zeminde violet accent ile en sik/modern varyant. Bento kart duzeni, ince border'lar, ApexCharts donut+bar koyu temaya oturtuldu, sidebar'da inset violet aktif cizgisi ve nefes alan bir bilgi yogunlugu var.</p>
+      <div class="pal">Arka plan #18181b / #1c1c1f, accent violet #8b5cf6</div>
+      <div class="open">Aç <span>&rarr;</span></div>
+    </a>
+  </div>
+</div></body></html>

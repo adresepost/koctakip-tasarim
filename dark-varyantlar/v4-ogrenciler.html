@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>KocTakip — Ogrenciler</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Plus Jakarta Sans', 'ui-sans-serif', 'system-ui'] },
+        colors: {
+          ink: {
+            900: '#18181b', 850: '#1c1c1f', 800: '#212124', 750: '#26262a',
+            700: '#2a2a2e', 600: '#3a3a40', 500: '#52525b'
+          },
+          violet: {
+            DEFAULT: '#8b5cf6', 400: '#a78bfa', 500: '#8b5cf6', 600: '#7c3aed'
+          }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  :root { color-scheme: dark; }
+  html, body { background: #18181b; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3a3a40; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+  .card { background: #1c1c1f; border: 1px solid rgba(255,255,255,0.06); }
+  .card-hover { transition: border-color .2s ease, transform .2s ease; }
+  .card-hover:hover { border-color: rgba(139,92,246,0.35); }
+  .nav-item { transition: background .15s ease, color .15s ease; }
+  .nav-item:hover { background: rgba(255,255,255,0.04); }
+  .nav-active { background: rgba(139,92,246,0.12); color: #a78bfa; box-shadow: inset 2px 0 0 #8b5cf6; }
+  .ring-dot { box-shadow: 0 0 0 3px rgba(139,92,246,0.12); }
+  .grid-dots {
+    background-image: radial-gradient(rgba(139,92,246,0.10) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+  .apexcharts-tooltip { background: #212124 !important; border: 1px solid #3a3a40 !important; color: #e4e4e7 !important; box-shadow: 0 8px 24px rgba(0,0,0,.5) !important; }
+  .apexcharts-tooltip-title { background: #26262a !important; border-bottom: 1px solid #3a3a40 !important; }
+  .fade-up { animation: fadeUp .5s ease both; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .row-click { cursor: pointer; transition: background .15s; position: relative; }
+  .row-click:hover { background: rgba(255,255,255,0.02); }
+  .row-actions { opacity: 0; transition: opacity .12s; }
+  .row-click:hover .row-actions { opacity: 1; }
+  th.sortable { cursor: pointer; user-select: none; transition: color .15s; }
+  th.sortable:hover { color: #a78bfa; }
+  .chip { cursor: pointer; transition: .14s; border: 1px solid rgba(255,255,255,0.08); background: #212124; color: #a1a1aa; }
+  .chip.on { color: #fff; border-color: transparent; }
+  .dense #ogrTablo td { padding-top: .4rem; padding-bottom: .4rem; }
+  /* Modal */
+  #ogrModal { transition: opacity .22s ease; }
+  #ogrModal.hidden-modal { opacity: 0; pointer-events: none; }
+  #ogrModalCard { transition: transform .24s cubic-bezier(.2,.8,.2,1), opacity .24s; }
+  #ogrModal.hidden-modal #ogrModalCard { transform: translateY(16px) scale(.985); opacity: 0; }
+  .tabbtn { transition: background .15s, color .15s; }
+  .tabbtn.on { background: rgba(139,92,246,0.12); color: #a78bfa; }
+  kbd { font-family: inherit; }
+
+  /* ============================================================
+     MOBIL DAVRANIS (<=1023px) — sadece mobil; masaustu korunur
+     Esik Tailwind 'lg' (1024px) ile hizali: <1024 mobil, >=1024 masaustu
+     ============================================================ */
+  /* Mobil elemanlar varsayilan gizli (masaustu) */
+  #mobileTopbar { display: none; }
+  #mobileDrawer, #drawerScrim { display: none; }
+
+  @media (max-width: 1023px) {
+    /* Tam ekran cerceve: govde dogal kayar, kenar bosluklari sifir */
+    html, body { height: auto; overflow-x: hidden; }
+
+    /* MOBIL TOPBAR */
+    #mobileTopbar {
+      display: flex;
+      position: sticky; top: 0; z-index: 40;
+      height: 56px; align-items: center; gap: 10px;
+      padding: 0 14px;
+      padding-top: env(safe-area-inset-top, 0px);
+      height: calc(56px + env(safe-area-inset-top, 0px));
+      background: rgba(24,24,27,0.92);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* Masaustu topbar'i mobilde gizle */
+    #desktopHeader { display: none !important; }
+
+    /* SOL DRAWER SIDEBAR */
+    #mobileDrawer {
+      display: flex;
+      position: fixed !important; inset: 0 auto 0 0; z-index: 60;
+      width: 82vw !important; max-width: 300px; height: 100%;
+      transform: translateX(-100%) !important;
+      transition: transform .28s cubic-bezier(.2,.8,.2,1);
+      background: #1c1c1f;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      flex-direction: column;
+    }
+    body.drawer-open #mobileDrawer { transform: translateX(0) !important; }
+
+    #drawerScrim {
+      display: block;
+      position: fixed; inset: 0; z-index: 55;
+      background: rgba(9,9,11,0.6);
+      backdrop-filter: blur(2px);
+      opacity: 0; pointer-events: none;
+      transition: opacity .28s ease;
+    }
+    body.drawer-open #drawerScrim { opacity: 1; pointer-events: auto; }
+    body.drawer-open { overflow: hidden; }
+
+    /* Ana icerik tam genislik (sidebar margin'i sifirla) */
+    .main-shell { margin-left: 0 !important; }
+
+    /* CONTENT tam-bleed: kenar bosluklari daralt */
+    #content { padding: 14px 12px 22px !important; gap: 0; }
+    #content > section, #content > footer { margin-bottom: 16px; }
+
+    /* Stat kartlari: 2 sutun kalsin ama sik */
+    #content .card.card-hover.rounded-2xl { padding: 16px !important; }
+
+    /* Arac cubugu: arama tam satir, digerleri altina */
+    .toolbar-row { gap: 8px; }
+    .toolbar-row .search-wrap { flex: 1 1 100%; min-width: 0 !important; }
+
+    /* Risk / filtre satiri: yatay kaydirilabilir cip serisi */
+    .filter-row {
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 4px;
+      margin: 0 -12px; padding-left: 12px; padding-right: 12px;
+    }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-row > * { flex: 0 0 auto; }
+    .filter-row .chip { padding: 8px 14px; font-size: 12px; }
+    .filter-row select { padding: 9px 12px; }
+    .filter-row #sonuc { margin-left: 8px; }
+
+    /* Dokunma hedefleri >=44px */
+    .toolbar-row #densityBtn,
+    .toolbar-row .view-toggle button { min-height: 44px; min-width: 44px; }
+    .toolbar-row .view-toggle { padding: 3px; }
+
+    /* Bulk bar: sarilir, butonlar buyuk */
+    #bulkBar { flex-wrap: wrap; }
+    #bulkBar button { min-height: 40px; }
+
+    /* Tablo mobilde gizli (kart varsayilan) — ama acilirsa yatay kayar */
+    #tableWrap .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+    /* Kart gorunumu tek sutun, dokunmasi kolay */
+    #cardWrap { grid-template-columns: 1fr !important; gap: 12px; }
+    #cardWrap .card { padding: 16px !important; }
+
+    /* ---------- MODAL: tam ekran bottom-sheet ---------- */
+    #ogrModal { padding: 0 !important; align-items: flex-end !important; }
+    /* Kart tek dikey kaydirma kabi: kimlik -> sekme -> KPI -> grafik -> notlar tumu erisilir */
+    #ogrModalCard {
+      width: 100% !important; max-width: 100% !important;
+      height: 100dvh !important; max-height: 100dvh !important;
+      border-radius: 0 !important;
+      flex-direction: column !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    #ogrModal.hidden-modal #ogrModalCard { transform: translateY(100%) scale(1); opacity: 1; }
+
+    /* Sol kimlik paneli: uste, tam genislik, dogal yukseklik, kendi ici kaymaz */
+    #ogrModalCard > .md\:w-\[304px\] {
+      width: 100% !important;
+      border-right: none !important;
+      border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+      padding: 16px 18px !important;
+      flex: 0 0 auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+    /* Sag panel: dogal yukseklik, kart ile birlikte kayar (kendi ici kaymaz) */
+    #ogrModalCard > .flex-1 {
+      min-height: 0;
+      flex: 0 0 auto !important;
+      overflow: visible !important;
+    }
+    #ogrModalCard > .flex-1 > .overflow-y-auto {
+      padding: 16px !important;
+      flex: none !important;
+      max-height: none !important;
+      overflow: visible !important;
+    }
+
+    /* Modal sekme cubugu: uste yapisik kalabilir */
+    #ogrModalCard > .flex-1 > .flex.items-center.justify-between {
+      position: sticky; top: 0; z-index: 5;
+      background: #1c1c1f;
+    }
+
+    /* Modal sekme cubugu yatay kayabilir */
+    #ogrModalCard .flex.gap-1 { overflow-x: auto; scrollbar-width: none; }
+    #ogrModalCard .flex.gap-1::-webkit-scrollbar { display: none; }
+    .tabbtn { flex: 0 0 auto; white-space: nowrap; }
+
+    /* Modal ic gridleri alt alta */
+    #tabGenel .grid { grid-template-columns: 1fr 1fr !important; }
+    #tabGenel .lg\:grid-cols-2 { grid-template-columns: 1fr !important; }
+    #tabGenel .lg\:grid-cols-4 { grid-template-columns: 1fr 1fr !important; }
+
+    /* Grafik konteynerleri tasmasin */
+    #mTrend, #mDers { max-width: 100%; overflow: hidden; }
+    #mTrend .apexcharts-canvas, #mDers .apexcharts-canvas { max-width: 100% !important; }
+
+    /* Okunur tipografi: cok kucuk kritik metni buyut */
+    #content { font-size: 14px; }
+    .filter-row .text-\[10px\], #content .uppercase.text-\[10px\] { font-size: 11px; }
+
+    /* Alt bilgi ortala */
+    #content > footer { text-align: center; }
+  }
+</style>
+<style id="mobil-modal-fix">
+/* Mobilde acik modal kartini ekrana getir: kapali durumdaki translateY(100%) acikken sifirlanir */
+@media (max-width:1023px){
+  #ogrModal:not(.hidden-modal) #ogrModalCard { transform: none !important; }
+}
+</style>
+</head>
+<body class="font-sans text-zinc-300 antialiased">
+
+<!-- ============ MOBIL TOPBAR (yalnizca <=1023px) ============ -->
+<header id="mobileTopbar">
+  <button onclick="openDrawer()" aria-label="Menu" class="w-11 h-11 -ml-1.5 grid place-items-center rounded-lg hover:bg-white/5 text-zinc-300">
+    <i data-lucide="menu" class="w-6 h-6"></i>
+  </button>
+  <div class="flex items-center gap-2 min-w-0">
+    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 grid place-items-center shadow-lg shadow-violet-600/20 shrink-0">
+      <i data-lucide="compass" class="w-[18px] h-[18px] text-white"></i>
+    </div>
+    <div class="min-w-0">
+      <div class="text-[15px] font-extrabold text-white tracking-tight leading-none truncate">KocTakip</div>
+      <div class="text-[10px] text-zinc-500 font-medium leading-none mt-0.5">Ogrenciler</div>
+    </div>
+  </div>
+  <div class="ml-auto flex items-center gap-1">
+    <button onclick="mobileFocusSearch()" aria-label="Ara" class="w-11 h-11 grid place-items-center rounded-lg hover:bg-white/5 text-zinc-300">
+      <i data-lucide="search" class="w-[22px] h-[22px]"></i>
+    </button>
+    <button aria-label="Bildirimler" class="w-11 h-11 grid place-items-center rounded-lg hover:bg-white/5 text-zinc-300 relative">
+      <i data-lucide="bell" class="w-[22px] h-[22px]"></i>
+      <span class="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-violet-500 text-white text-[9px] font-bold">7</span>
+    </button>
+  </div>
+</header>
+
+<!-- Drawer scrim -->
+<div id="drawerScrim" onclick="closeDrawer()"></div>
+
+<!-- ============ MOBIL DRAWER SIDEBAR (yalnizca <=1023px) ============ -->
+<aside id="mobileDrawer">
+  <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/[0.06] shrink-0">
+    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 grid place-items-center shadow-lg shadow-violet-600/20">
+      <i data-lucide="compass" class="w-5 h-5 text-white"></i>
+    </div>
+    <div class="flex-1">
+      <div class="text-[15px] font-extrabold text-white tracking-tight leading-none">KocTakip</div>
+      <div class="text-[10px] text-zinc-500 font-medium mt-0.5">Yonetim Konsolu</div>
+    </div>
+    <button onclick="closeDrawer()" aria-label="Kapat" class="w-9 h-9 grid place-items-center rounded-lg hover:bg-white/5 text-zinc-400">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+  </div>
+  <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+    <p class="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Panel</p>
+    <a href="#" onclick="closeDrawer()" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-zinc-400">
+      <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i> Genel Bakis
+    </a>
+    <p class="px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Yonetim</p>
+    <a href="#" onclick="closeDrawer()" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-zinc-400">
+      <i data-lucide="graduation-cap" class="w-[18px] h-[18px]"></i> Ogretmenler
+    </a>
+    <a href="#" onclick="closeDrawer()" class="nav-item nav-active flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-semibold">
+      <i data-lucide="users" class="w-[18px] h-[18px]"></i> Ogrenciler
+      <span class="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white/5 text-zinc-300">1.240</span>
+    </a>
+    <a href="#" onclick="closeDrawer()" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-zinc-400">
+      <i data-lucide="book-open" class="w-[18px] h-[18px]"></i> Dersler
+    </a>
+    <a href="#" onclick="closeDrawer()" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-zinc-400">
+      <i data-lucide="clipboard-list" class="w-[18px] h-[18px]"></i> Odevler
+    </a>
+    <a href="#" onclick="closeDrawer()" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-zinc-400">
+      <i data-lucide="file-check-2" class="w-[18px] h-[18px]"></i> Denemeler
+    </a>
+    <a href="#" onclick="closeDrawer()" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-zinc-400">
+      <i data-lucide="brain" class="w-[18px] h-[18px]"></i> Psikolojik Testler
+    </a>
+    <a href="#" onclick="closeDrawer()" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-zinc-400">
+      <i data-lucide="calendar-days" class="w-[18px] h-[18px]"></i> Ajanda
+    </a>
+    <p class="px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Sistem</p>
+    <a href="#" onclick="closeDrawer()" class="nav-item flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-zinc-400">
+      <i data-lucide="settings-2" class="w-[18px] h-[18px]"></i> Kurum Ayarlari
+    </a>
+  </nav>
+  <div class="p-3 border-t border-white/[0.06] shrink-0">
+    <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/[0.04] transition">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500/80 to-teal-600/80 grid place-items-center text-white text-xs font-bold ring-dot">EY</div>
+      <div class="min-w-0">
+        <div class="text-[13px] font-semibold text-zinc-200 truncate">Elif Yildirim</div>
+        <div class="text-[11px] text-zinc-500 truncate">Kurum Yoneticisi</div>
+      </div>
+      <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto"></i>
+    </div>
+  </div>
+</aside>
+
+<div class="flex min-h-screen">
+
+  <!-- ============ SIDEBAR (masaustu) ============ -->
+  <aside class="hidden lg:flex flex-col w-64 shrink-0 bg-ink-850 border-r border-white/[0.06] fixed inset-y-0 z-40">
+    <div class="h-16 flex items-center gap-2.5 px-5 border-b border-white/[0.06]">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 grid place-items-center shadow-lg shadow-violet-600/20">
+        <i data-lucide="compass" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <div class="text-[15px] font-extrabold text-white tracking-tight leading-none">KocTakip</div>
+        <div class="text-[10px] text-zinc-500 font-medium mt-0.5">Yonetim Konsolu</div>
+      </div>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+      <p class="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Panel</p>
+      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400">
+        <i data-lucide="layout-dashboard" class="w-[18px] h-[18px]"></i> Genel Bakis
+      </a>
+      <p class="px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Yonetim</p>
+      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400">
+        <i data-lucide="graduation-cap" class="w-[18px] h-[18px]"></i> Ogretmenler
+      </a>
+      <a href="#" class="nav-item nav-active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold">
+        <i data-lucide="users" class="w-[18px] h-[18px]"></i> Ogrenciler
+        <span class="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-white/5 text-zinc-300">1.240</span>
+      </a>
+      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400">
+        <i data-lucide="book-open" class="w-[18px] h-[18px]"></i> Dersler
+      </a>
+      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400">
+        <i data-lucide="clipboard-list" class="w-[18px] h-[18px]"></i> Odevler
+      </a>
+      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400">
+        <i data-lucide="file-check-2" class="w-[18px] h-[18px]"></i> Denemeler
+      </a>
+      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400">
+        <i data-lucide="brain" class="w-[18px] h-[18px]"></i> Psikolojik Testler
+      </a>
+      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400">
+        <i data-lucide="calendar-days" class="w-[18px] h-[18px]"></i> Ajanda
+      </a>
+      <p class="px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Sistem</p>
+      <a href="#" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-400">
+        <i data-lucide="settings-2" class="w-[18px] h-[18px]"></i> Kurum Ayarlari
+      </a>
+    </nav>
+
+    <div class="p-3 border-t border-white/[0.06]">
+      <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-white/[0.04] transition">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500/80 to-teal-600/80 grid place-items-center text-white text-xs font-bold ring-dot">EY</div>
+        <div class="min-w-0">
+          <div class="text-[13px] font-semibold text-zinc-200 truncate">Elif Yildirim</div>
+          <div class="text-[11px] text-zinc-500 truncate">Kurum Yoneticisi</div>
+        </div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-600 ml-auto"></i>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main-shell flex-1 lg:ml-64 min-w-0">
+
+    <!-- TOP BAR (masaustu) -->
+    <header id="desktopHeader" class="h-16 sticky top-0 z-30 bg-ink-900/85 backdrop-blur-xl border-b border-white/[0.06] flex items-center gap-3 px-4 sm:px-6">
+      <button class="lg:hidden w-9 h-9 grid place-items-center rounded-lg hover:bg-white/5 text-zinc-400">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+      <div>
+        <h1 class="text-[15px] sm:text-base font-bold text-white tracking-tight leading-none">Ogrenciler</h1>
+        <p class="text-[11px] text-zinc-500 mt-0.5 hidden sm:block">Ara, filtrele, sirala &middot; satira tikla profil acilir &middot; <kbd class="px-1.5 py-0.5 bg-ink-800 rounded text-[10px] border border-white/[0.08] text-zinc-400">/</kbd> ile aramaya odaklan</p>
+      </div>
+
+      <div class="ml-auto flex items-center gap-2 sm:gap-3">
+        <button class="w-9 h-9 grid place-items-center rounded-lg bg-ink-800 border border-white/[0.06] hover:border-white/10 text-zinc-400 relative">
+          <i data-lucide="bell" class="w-[18px] h-[18px]"></i>
+          <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-violet-500 text-white text-[10px] font-bold ring-2 ring-ink-900">7</span>
+        </button>
+        <button class="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition shadow-lg shadow-violet-600/20">
+          <i data-lucide="plus" class="w-4 h-4"></i> Yeni Ogrenci
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <main id="content" class="p-4 sm:p-6 space-y-5 fade-up">
+
+      <!-- STAT CHIPS -->
+      <section class="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="card card-hover rounded-2xl p-5">
+          <div class="flex items-start justify-between">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/10 grid place-items-center">
+              <i data-lucide="users" class="w-5 h-5 text-sky-400"></i>
+            </div>
+            <span class="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> %12,1
+            </span>
+          </div>
+          <div class="mt-4">
+            <div class="text-[28px] font-extrabold text-white tracking-tight leading-none">1.240</div>
+            <div class="text-[13px] text-zinc-500 mt-1.5 font-medium">Toplam Ogrenci</div>
+          </div>
+        </div>
+        <div class="card card-hover rounded-2xl p-5">
+          <div class="flex items-start justify-between">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 grid place-items-center">
+              <i data-lucide="user-check" class="w-5 h-5 text-emerald-400"></i>
+            </div>
+            <span class="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i> %96,6
+            </span>
+          </div>
+          <div class="mt-4">
+            <div class="text-[28px] font-extrabold text-white tracking-tight leading-none">1.198</div>
+            <div class="text-[13px] text-zinc-500 mt-1.5 font-medium">Aktif</div>
+          </div>
+        </div>
+        <div class="card card-hover rounded-2xl p-5">
+          <div class="flex items-start justify-between">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/10 grid place-items-center">
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-400"></i>
+            </div>
+            <span class="flex items-center gap-1 text-[11px] font-semibold text-rose-400 bg-rose-500/10 px-2 py-1 rounded-lg">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> +5
+            </span>
+          </div>
+          <div class="mt-4">
+            <div class="text-[28px] font-extrabold text-white tracking-tight leading-none">37</div>
+            <div class="text-[13px] text-zinc-500 mt-1.5 font-medium">Risk Altinda</div>
+          </div>
+        </div>
+        <div class="card card-hover rounded-2xl p-5">
+          <div class="flex items-start justify-between">
+            <div class="w-10 h-10 rounded-xl bg-violet-500/10 grid place-items-center">
+              <i data-lucide="user-plus" class="w-5 h-5 text-violet-400"></i>
+            </div>
+            <span class="flex items-center gap-1 text-[11px] font-semibold text-violet-400 bg-violet-500/10 px-2 py-1 rounded-lg">
+              <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Tem
+            </span>
+          </div>
+          <div class="mt-4">
+            <div class="text-[28px] font-extrabold text-white tracking-tight leading-none">54</div>
+            <div class="text-[13px] text-zinc-500 mt-1.5 font-medium">Bu Ay Eklenen</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEARCH + VIEW TOGGLES -->
+      <section class="toolbar-row flex flex-wrap items-center gap-2">
+        <div class="search-wrap relative flex-1 min-w-[240px]">
+          <i data-lucide="search" class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input id="ara" type="text" placeholder="Ad, sinif, hedef bolum veya koc ara..."
+            class="w-full bg-ink-800 border border-white/[0.06] rounded-lg pl-9 pr-9 py-2.5 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10" />
+          <button id="araClear" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="view-toggle flex items-center bg-ink-800 border border-white/[0.06] rounded-lg p-1">
+          <button id="viewTable" onclick="setView('table')" class="px-2.5 py-1.5 rounded-md text-zinc-400" title="Tablo gorunumu"><i data-lucide="table-2" class="w-4 h-4"></i></button>
+          <button id="viewCard" onclick="setView('card')" class="px-2.5 py-1.5 rounded-md text-zinc-500" title="Kart gorunumu"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
+        </div>
+        <button id="densityBtn" onclick="toggleDensity()" class="px-3 py-2.5 bg-ink-800 border border-white/[0.06] rounded-lg text-zinc-400 hover:border-white/10 flex items-center gap-2 text-sm transition" title="Yogunluk"><i data-lucide="rows-3" class="w-4 h-4"></i></button>
+      </section>
+
+      <!-- RISK FILTERS -->
+      <section class="filter-row flex flex-wrap items-center gap-2">
+        <span class="text-[10px] font-semibold text-zinc-600 uppercase tracking-wider mr-1">Risk</span>
+        <span class="chip on rounded-full px-3 py-1 text-xs font-semibold" data-risk="kritik" style="background:#f43f5e" onclick="toggleRisk('kritik',this)">Riskli</span>
+        <span class="chip on rounded-full px-3 py-1 text-xs font-semibold" data-risk="dikkat" style="background:#f59e0b" onclick="toggleRisk('dikkat',this)">Dikkat</span>
+        <span class="chip on rounded-full px-3 py-1 text-xs font-semibold" data-risk="iyi" style="background:#10b981" onclick="toggleRisk('iyi',this)">Iyi</span>
+        <span class="w-px h-5 bg-white/10 mx-1"></span>
+        <select id="fSinif" onchange="render()" class="bg-ink-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10"><option value="">Tum siniflar</option></select>
+        <select id="fKoc" onchange="render()" class="bg-ink-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10"><option value="">Tum koclar</option></select>
+        <button id="filtreTemizle" onclick="clearFilters()" class="hidden items-center gap-1 text-xs font-semibold text-violet-400 hover:text-violet-300 ml-1"><i data-lucide="x" class="w-3.5 h-3.5"></i> Temizle <span id="filtreSayi" class="bg-violet-600 text-white rounded-full px-1.5 text-[10px]"></span></button>
+        <span id="sonuc" class="ml-auto text-[11px] text-zinc-500 font-medium"></span>
+      </section>
+
+      <!-- BULK BAR -->
+      <section id="bulkBar" class="hidden items-center gap-3 px-4 py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/25">
+        <span id="bulkCount" class="text-sm font-bold text-violet-300"></span>
+        <button class="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-violet-300 transition"><i data-lucide="clipboard-plus" class="w-4 h-4"></i> Odev Ata</button>
+        <button class="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-violet-300 transition"><i data-lucide="message-square" class="w-4 h-4"></i> Mesaj Gonder</button>
+        <button class="flex items-center gap-1.5 text-sm font-medium text-zinc-300 hover:text-violet-300 transition"><i data-lucide="download" class="w-4 h-4"></i> Disa Aktar</button>
+        <button onclick="clearSelection()" class="ml-auto text-xs text-zinc-500 hover:text-zinc-200 transition">Secimi kaldir</button>
+      </section>
+
+      <!-- TABLE -->
+      <section id="tableWrap" class="card rounded-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
+          <div>
+            <h2 class="text-sm font-bold text-white">Ogrenci Listesi</h2>
+            <p class="text-[11px] text-zinc-500 mt-0.5">Basliklara tikla sirala &middot; satira tikla yatay profil acilir</p>
+          </div>
+          <span class="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Canli
+          </span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm min-w-[920px]">
+            <thead>
+              <tr class="text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/[0.06] select-none">
+                <th class="pl-5 pr-2 py-3 w-9"><input type="checkbox" id="selAll" onclick="toggleSelectAll(this)" class="accent-violet-500 w-3.5 h-3.5 align-middle"></th>
+                <th class="text-left font-semibold px-3 py-3 sortable" onclick="sortBy('ad')">Ogrenci <span data-s="ad"></span></th>
+                <th class="text-left font-semibold px-3 py-3 sortable" onclick="sortBy('sinifOrder')">Sinif <span data-s="sinifOrder"></span></th>
+                <th class="text-left font-semibold px-3 py-3">Hedef / Koc</th>
+                <th class="text-left font-semibold px-3 py-3">Trend</th>
+                <th class="text-center font-semibold px-3 py-3 sortable" onclick="sortBy('sonNet')">Son Net <span data-s="sonNet"></span></th>
+                <th class="text-left font-semibold px-3 py-3 w-44 sortable" onclick="sortBy('odev')">Odev <span data-s="odev"></span></th>
+                <th class="text-left font-semibold px-3 py-3">Son Gorusme</th>
+                <th class="text-right font-semibold px-5 py-3">Durum</th>
+              </tr>
+            </thead>
+            <tbody id="ogrTablo" class="divide-y divide-white/[0.04]"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- CARD VIEW -->
+      <section id="cardWrap" class="hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></section>
+
+      <footer class="pt-2 pb-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-zinc-600">
+        <span>&copy; 2026 KocTakip &middot; Yonetim Konsolu v2.4</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Tum sistemler calisiyor</span>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<!-- ============ YATAY PROFIL MODALI ============ -->
+<div id="ogrModal" class="hidden-modal fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" style="background:rgba(9,9,11,.7); backdrop-filter:blur(6px);" onclick="if(event.target===this)closeModal()">
+  <div id="ogrModalCard" class="card rounded-2xl shadow-2xl shadow-black/60 w-full max-w-[1080px] max-h-[90vh] overflow-hidden flex flex-col md:flex-row">
+
+    <!-- SOL: kimlik paneli -->
+    <div class="md:w-[304px] shrink-0 bg-gradient-to-b from-ink-800 to-ink-850 border-b md:border-b-0 md:border-r border-white/[0.06] p-6 flex flex-col relative overflow-y-auto">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-1.5">
+          <button onclick="navStudent(-1)" class="w-8 h-8 rounded-lg bg-ink-800 border border-white/[0.06] hover:border-violet-500/40 grid place-items-center text-zinc-400 transition" title="Onceki (Sol ok)"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+          <button onclick="navStudent(1)" class="w-8 h-8 rounded-lg bg-ink-800 border border-white/[0.06] hover:border-violet-500/40 grid place-items-center text-zinc-400 transition" title="Sonraki (Sag ok)"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+          <span id="mPos" class="text-[11px] text-zinc-600 ml-1 tabular-nums"></span>
+        </div>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-lg bg-ink-800 border border-white/[0.06] hover:border-white/10 grid place-items-center text-zinc-400 transition"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="relative w-24 h-24 mx-auto mt-1">
+        <img id="mAvatar" src="" class="w-24 h-24 rounded-2xl shadow-lg ring-1 ring-white/10" alt="">
+        <span id="mAvatarDot" class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full grid place-items-center ring-[3px] ring-ink-850"><i data-lucide="circle-dot" class="w-3.5 h-3.5"></i></span>
+      </div>
+      <h2 id="mAd" class="text-lg font-extrabold text-center mt-3.5 text-white tracking-tight"></h2>
+      <p id="mSinif" class="text-center text-[12px] text-zinc-500 mt-0.5"></p>
+      <div id="mRisk" class="mx-auto mt-3 text-[11px] font-bold px-3 py-1 rounded-full"></div>
+
+      <div class="mt-6 space-y-1">
+        <div class="flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-white/[0.03] transition">
+          <div class="w-7 h-7 rounded-lg bg-violet-500/10 grid place-items-center shrink-0"><i data-lucide="target" class="w-3.5 h-3.5 text-violet-400"></i></div>
+          <div class="min-w-0"><div class="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">Hedef</div><div id="mHedef" class="text-[13px] text-zinc-200 font-medium truncate"></div></div>
+        </div>
+        <div class="flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-white/[0.03] transition">
+          <div class="w-7 h-7 rounded-lg bg-violet-500/10 grid place-items-center shrink-0"><i data-lucide="user-check" class="w-3.5 h-3.5 text-violet-400"></i></div>
+          <div class="min-w-0"><div class="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">Koc</div><div id="mKoc" class="text-[13px] text-zinc-200 font-medium truncate"></div></div>
+        </div>
+        <div class="flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-white/[0.03] transition">
+          <div class="w-7 h-7 rounded-lg bg-violet-500/10 grid place-items-center shrink-0"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-violet-400"></i></div>
+          <div class="min-w-0"><div class="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">Il</div><div id="mIl" class="text-[13px] text-zinc-200 font-medium truncate"></div></div>
+        </div>
+        <div class="flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-white/[0.03] transition">
+          <div class="w-7 h-7 rounded-lg bg-violet-500/10 grid place-items-center shrink-0"><i data-lucide="users" class="w-3.5 h-3.5 text-violet-400"></i></div>
+          <div class="min-w-0"><div class="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">Veli</div><div id="mVeli" class="text-[13px] text-zinc-200 font-medium truncate"></div></div>
+        </div>
+        <div class="flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-white/[0.03] transition">
+          <div class="w-7 h-7 rounded-lg bg-violet-500/10 grid place-items-center shrink-0"><i data-lucide="phone" class="w-3.5 h-3.5 text-violet-400"></i></div>
+          <div class="min-w-0"><div class="text-[10px] uppercase tracking-wider text-zinc-600 font-semibold">Telefon</div><div id="mTel" class="text-[13px] text-zinc-200 font-medium truncate"></div></div>
+        </div>
+      </div>
+
+      <div class="mt-auto pt-6 grid grid-cols-3 gap-2">
+        <button class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl bg-ink-800 border border-white/[0.06] hover:border-violet-500/40 text-[11px] font-medium text-zinc-300 transition"><i data-lucide="message-square" class="w-4 h-4 text-violet-400"></i>Mesaj</button>
+        <button class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl bg-ink-800 border border-white/[0.06] hover:border-violet-500/40 text-[11px] font-medium text-zinc-300 transition"><i data-lucide="clipboard-plus" class="w-4 h-4 text-violet-400"></i>Odev</button>
+        <button class="flex flex-col items-center gap-1.5 py-2.5 rounded-xl bg-ink-800 border border-white/[0.06] hover:border-violet-500/40 text-[11px] font-medium text-zinc-300 transition"><i data-lucide="calendar-plus" class="w-4 h-4 text-violet-400"></i>Gorusme</button>
+      </div>
+    </div>
+
+    <!-- SAG: mini-dashboard -->
+    <div class="flex-1 min-w-0 flex flex-col bg-ink-850">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] shrink-0">
+        <div class="flex gap-1">
+          <button class="tabbtn on px-3 py-1.5 text-[13px] font-semibold rounded-lg text-zinc-500" data-tab="genel" onclick="showTab('genel')">Genel Durum</button>
+          <button class="tabbtn px-3 py-1.5 text-[13px] font-medium rounded-lg text-zinc-500" data-tab="denemeler" onclick="showTab('denemeler')">Denemeler</button>
+          <button class="tabbtn px-3 py-1.5 text-[13px] font-medium rounded-lg text-zinc-500" data-tab="odevler" onclick="showTab('odevler')">Odevler</button>
+        </div>
+        <button onclick="closeModal()" class="flex w-9 h-9 rounded-lg bg-ink-800 border border-white/[0.06] items-center justify-center text-zinc-400 hover:border-white/10 transition shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6">
+        <!-- TAB: GENEL -->
+        <div id="tabGenel">
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <div class="rounded-xl bg-ink-800 border border-white/[0.05] p-3.5">
+              <div class="flex items-center gap-2 text-violet-400"><i data-lucide="line-chart" class="w-3.5 h-3.5"></i><span class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Net Ort.</span></div>
+              <p id="mKpiNet" class="text-xl font-extrabold text-white mt-1.5 leading-none tabular-nums"></p>
+            </div>
+            <div class="rounded-xl bg-ink-800 border border-white/[0.05] p-3.5">
+              <div class="flex items-center gap-2 text-emerald-400"><i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i><span class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Odev</span></div>
+              <p id="mKpiOdev" class="text-xl font-extrabold text-white mt-1.5 leading-none tabular-nums"></p>
+            </div>
+            <div class="rounded-xl bg-ink-800 border border-white/[0.05] p-3.5">
+              <div class="flex items-center gap-2 text-amber-400"><i data-lucide="calendar-x" class="w-3.5 h-3.5"></i><span class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Devamsizlik</span></div>
+              <p id="mKpiDev" class="text-xl font-extrabold text-white mt-1.5 leading-none"></p>
+            </div>
+            <div class="rounded-xl bg-ink-800 border border-white/[0.05] p-3.5">
+              <div class="flex items-center gap-2 text-sky-400"><i data-lucide="smile" class="w-3.5 h-3.5"></i><span class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">Mood</span></div>
+              <p id="mKpiMood" class="text-xl font-extrabold text-white mt-1.5 leading-none"></p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="rounded-xl bg-ink-800 border border-white/[0.05] p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-bold text-white">Deneme Net Trendi</p>
+                  <p class="text-[11px] text-zinc-500 mt-0.5">Son 8 deneme</p>
+                </div>
+                <i data-lucide="trending-up" class="w-4 h-4 text-zinc-600"></i>
+              </div>
+              <div id="mTrend" class="mt-1"></div>
+            </div>
+            <div class="rounded-xl bg-ink-800 border border-white/[0.05] p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-bold text-white">Ders Bazli Net</p>
+                  <p class="text-[11px] text-zinc-500 mt-0.5">Son deneme</p>
+                </div>
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-zinc-600"></i>
+              </div>
+              <div id="mDers" class="mt-1"></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+            <div class="rounded-xl bg-ink-800 border border-white/[0.05] p-4">
+              <p class="text-sm font-bold text-white mb-1">Mood &middot; Son 7 Gun</p>
+              <p class="text-[11px] text-zinc-500 mb-2">Gunluk ruh hali takibi</p>
+              <div id="mMoodlar" class="flex items-end justify-between gap-1.5 h-24 mt-3"></div>
+            </div>
+            <div class="rounded-xl bg-ink-800 border border-white/[0.05] p-4">
+              <p class="text-sm font-bold text-white mb-3 flex items-center gap-2"><i data-lucide="sticky-note" class="w-4 h-4 text-violet-400"></i> Koc Notlari</p>
+              <div class="flex gap-2 mb-3">
+                <input id="notInput" type="text" placeholder="Hizli not ekle..." class="flex-1 bg-ink-850 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/10" onkeydown="if(event.key==='Enter')addNote()">
+                <button onclick="addNote()" class="px-3 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-sm font-semibold transition">Ekle</button>
+              </div>
+              <div id="mNotlar" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: DENEMELER -->
+        <div id="tabDenemeler" class="hidden">
+          <p class="text-sm font-bold text-white mb-3">Deneme Gecmisi</p>
+          <div class="rounded-xl bg-ink-800 border border-white/[0.05] overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="text-[11px] uppercase tracking-wider text-zinc-500 bg-ink-750 border-b border-white/[0.06]">
+                <tr><th class="px-4 py-2.5 text-left font-semibold">Deneme</th><th class="px-4 py-2.5 text-right font-semibold">Net</th><th class="px-4 py-2.5 text-right font-semibold">Degisim</th></tr>
+              </thead>
+              <tbody id="mDenemeTablo" class="divide-y divide-white/[0.04]"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB: ODEVLER -->
+        <div id="tabOdevler" class="hidden">
+          <p class="text-sm font-bold text-white mb-3">Tum Odevler</p>
+          <div id="mOdevlerFull" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+lucide.createIcons();
+
+/* ============ MOBIL DRAWER + ARAMA ============ */
+function openDrawer(){ document.body.classList.add('drawer-open'); }
+function closeDrawer(){ document.body.classList.remove('drawer-open'); }
+function mobileFocusSearch(){
+  const el=document.getElementById('ara');
+  if(el){ el.scrollIntoView({behavior:'smooth', block:'center'}); setTimeout(()=>el.focus(), 250); }
+}
+
+const ogrenciler = [
+  { id:1, ad:"Zeynep Kaya", sinif:"12. Sinif", sinifOrder:12, hedef:"Tip Fakultesi", puanTuru:"Sayisal", koc:"Ahmet Yilmaz", il:"Istanbul", veli:"Fatma Kaya (Anne)", tel:"0532 xxx 41 22",
+    risk:"iyi", sonNet:92.5, odev:96, devamsizlik:"2 gun", mood:"Iyi", sonGorusme:"2 gun once",
+    netler:[74,78,81,79,85,88,90,92], ders:{"TYT Turkce":36,"TYT Mat":38,"TYT Fen":18,"TYT Sosyal":19},
+    moodlar:[4,5,4,5,3,5,5], odevler:[["Paragraf 40 soru","Tamamlandi","ok"],["Turev konu tekrari","Tamamlandi","ok"],["Fizik optik test","Bekliyor","wait"],["Deneme analizi","Tamamlandi","ok"]], notlar:["Sozel netleri artista, tempoyu koru."] },
+  { id:2, ad:"Mert Demir", sinif:"11. Sinif", sinifOrder:11, hedef:"Bilgisayar Muh.", puanTuru:"Sayisal", koc:"Ayse Sahin", il:"Ankara", veli:"Kemal Demir (Baba)", tel:"0533 xxx 08 71",
+    risk:"kritik", sonNet:45.5, odev:41, devamsizlik:"9 gun", mood:"Dusuk", sonGorusme:"3 hafta once",
+    netler:[62,58,55,54,50,48,47,45], ders:{"TYT Turkce":22,"TYT Mat":14,"TYT Fen":9,"TYT Sosyal":15},
+    moodlar:[3,2,2,3,2,1,2], odevler:[["Problemler 30 soru","Gecikti (5g)","late"],["Geometri acilar","Gecikti (3g)","late"],["Kimya mol testi","Bekliyor","wait"]], notlar:["Motivasyon dusuk — veli gorusmesi planla.","Son 3 denemede surekli dusus."] },
+  { id:3, ad:"Elif Yildiz", sinif:"12. Sinif", sinifOrder:12, hedef:"Hukuk", puanTuru:"Esit Agirlik", koc:"Ahmet Yilmaz", il:"Izmir", veli:"Ayla Yildiz (Anne)", tel:"0505 xxx 63 90",
+    risk:"dikkat", sonNet:68.0, odev:74, devamsizlik:"4 gun", mood:"Orta", sonGorusme:"1 hafta once",
+    netler:[70,66,69,67,71,68,66,68], ders:{"TYT Turkce":34,"TYT Mat":20,"AYT Edebiyat":28,"AYT Tarih":22},
+    moodlar:[3,3,4,3,3,4,3], odevler:[["Paragraf hiz calismasi","Tamamlandi","ok"],["Matematik problem","Bekliyor","wait"],["Tarih 1. unite","Gecikti (2g)","late"]], notlar:["Matematik netlerinde duraganlik var."] },
+  { id:4, ad:"Can Ozturk", sinif:"Mezun", sinifOrder:13, hedef:"Tip Fakultesi", puanTuru:"Sayisal", koc:"Ayse Sahin", il:"Bursa", veli:"—", tel:"0544 xxx 19 05",
+    risk:"iyi", sonNet:104.5, odev:99, devamsizlik:"0 gun", mood:"Yuksek", sonGorusme:"Bugun",
+    netler:[88,91,95,97,99,101,103,104], ders:{"TYT Mat":40,"TYT Fen":19,"AYT Mat":32,"AYT Fen":34},
+    moodlar:[5,5,4,5,5,5,5], odevler:[["AYT deneme analizi","Tamamlandi","ok"],["Fizik modern","Tamamlandi","ok"],["Biyoloji tekrar","Tamamlandi","ok"]], notlar:["Hedefin uzerinde ilerliyor."] },
+  { id:5, ad:"Selin Aydin", sinif:"10. Sinif", sinifOrder:10, hedef:"Psikoloji", puanTuru:"Esit Agirlik", koc:"Mehmet Ak", il:"Antalya", veli:"Derya Aydin (Anne)", tel:"0537 xxx 77 14",
+    risk:"dikkat", sonNet:57.0, odev:68, devamsizlik:"3 gun", mood:"Orta", sonGorusme:"5 gun once",
+    netler:[48,52,50,55,53,58,56,57], ders:{"TYT Turkce":30,"TYT Mat":12,"TYT Sosyal":16,"TYT Fen":8},
+    moodlar:[3,4,3,3,4,3,4], odevler:[["Okuma anlama","Tamamlandi","ok"],["Denklemler","Bekliyor","wait"],["Cografya harita","Bekliyor","wait"]], notlar:[] }
+];
+
+// risk -> [renk, etiket]
+const riskStyle = {
+  iyi:    ["#34d399", "Iyi Durumda"],
+  dikkat: ["#fbbf24", "Takip Gerekli"],
+  kritik: ["#f87171", "Risk Altinda"]
+};
+const riskChipLabel = { iyi:"Iyi", dikkat:"Dikkat", kritik:"Riskli" };
+const riskChipColor = { iyi:"#10b981", dikkat:"#f59e0b", kritik:"#f43f5e" };
+const moodFace = ["\u{1F616}","\u{1F615}","\u{1F610}","\u{1F642}","\u{1F604}"];
+
+const state = { risk:new Set(['kritik','dikkat','iyi']), sinif:'', koc:'', q:'', sort:{key:'sinifOrder',dir:1}, view:'table', dense:false, selected:new Set(), currentId:null, tab:'genel' };
+let viewList = [];
+
+function avatarUrl(ad){ return "https://ui-avatars.com/api/?name="+encodeURIComponent(ad)+"&background=8b5cf6&color=fff&bold=true&size=128"; }
+function netColor(n){ return n >= 90 ? '#34d399' : n >= 65 ? '#a78bfa' : n >= 50 ? '#fbbf24' : '#f87171'; }
+function sparkline(data, col){
+  const w=64,h=20, mn=Math.min(...data), mx=Math.max(...data), r=(mx-mn)||1;
+  const pts=data.map((v,i)=>`${(i/(data.length-1))*w},${(h-((v-mn)/r)*h).toFixed(1)}`).join(' ');
+  const last=data[data.length-1], lx=w, ly=(h-((last-mn)/r)*h).toFixed(1);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${lx}" cy="${ly}" r="1.9" fill="${col}"/></svg>`;
+}
+
+// filtre acilirlarini doldur
+(function(){
+  const sinifSel=document.getElementById('fSinif'), kocSel=document.getElementById('fKoc');
+  [...new Set(ogrenciler.map(o=>o.sinif))].sort((a,b)=>ogrenciler.find(o=>o.sinif===a).sinifOrder-ogrenciler.find(o=>o.sinif===b).sinifOrder).forEach(s=>sinifSel.insertAdjacentHTML('beforeend',`<option value="${s}">${s}</option>`));
+  [...new Set(ogrenciler.map(o=>o.koc))].sort().forEach(k=>kocSel.insertAdjacentHTML('beforeend',`<option value="${k}">${k}</option>`));
+})();
+
+function getRows(){
+  const q=state.q.toLocaleLowerCase('tr');
+  let rows=ogrenciler.filter(o=>{
+    if(!state.risk.has(o.risk)) return false;
+    if(state.sinif && o.sinif!==state.sinif) return false;
+    if(state.koc && o.koc!==state.koc) return false;
+    if(q && !(o.ad+" "+o.sinif+" "+o.hedef+" "+o.koc).toLocaleLowerCase('tr').includes(q)) return false;
+    return true;
+  });
+  const {key,dir}=state.sort;
+  rows.sort((a,b)=>{ let x=a[key],y=b[key]; if(typeof x==='string') return x.localeCompare(y,'tr')*dir; return (x-y)*dir; });
+  return rows;
+}
+
+function render(){
+  state.sinif=document.getElementById('fSinif').value;
+  state.koc=document.getElementById('fKoc').value;
+  const rows=getRows();
+  viewList=rows.map(o=>o.id);
+  document.querySelectorAll('[data-s]').forEach(el=>el.textContent = el.dataset.s===state.sort.key ? (state.sort.dir>0?' ▲':' ▼') : '');
+  document.getElementById('sonuc').textContent = `${rows.length} / ${ogrenciler.length} ogrenci`;
+  const aktif=(state.risk.size<3?1:0)+(state.sinif?1:0)+(state.koc?1:0)+(state.q?1:0);
+  const ft=document.getElementById('filtreTemizle');
+  ft.classList.toggle('hidden', aktif===0); ft.classList.toggle('flex', aktif>0);
+  document.getElementById('filtreSayi').textContent=aktif;
+  if(state.view==='table'){ renderTable(rows); document.getElementById('tableWrap').classList.remove('hidden'); document.getElementById('cardWrap').classList.add('hidden'); }
+  else { renderCards(rows); document.getElementById('cardWrap').classList.remove('hidden'); document.getElementById('tableWrap').classList.add('hidden'); }
+  lucide.createIcons();
+  updateBulk();
+}
+
+function renderTable(rows){
+  const tb=document.getElementById('ogrTablo');
+  if(!rows.length){ tb.innerHTML=`<tr><td colspan="9" class="px-5 py-16 text-center text-zinc-500"><i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2"></i><p class="text-sm">Eslesen ogrenci yok. Filtreleri gevsetmeyi dene.</p></td></tr>`; return; }
+  tb.innerHTML=rows.map(o=>{
+    const [rc,rl]=riskStyle[o.risk], sel=state.selected.has(o.id);
+    return `<tr class="row-click" onclick="openModal(${o.id})">
+      <td class="pl-5 pr-2 py-3 w-9" onclick="event.stopPropagation()"><input type="checkbox" ${sel?'checked':''} onclick="toggleSelect(${o.id},this)" class="accent-violet-500 w-3.5 h-3.5 align-middle"></td>
+      <td class="px-3 py-3">
+        <div class="flex items-center gap-3">
+          <img src="${avatarUrl(o.ad)}" class="w-8 h-8 rounded-lg ring-1 ring-white/10 shrink-0">
+          <span class="font-semibold text-zinc-100 whitespace-nowrap">${o.ad}</span>
+        </div>
+      </td>
+      <td class="px-3 py-3 text-zinc-400">${o.sinif}</td>
+      <td class="px-3 py-3">
+        <div class="leading-tight"><span class="text-zinc-300 font-medium">${o.hedef}</span><div class="text-[11px] text-zinc-600">${o.koc} &middot; ${o.puanTuru}</div></div>
+      </td>
+      <td class="px-3 py-3">${sparkline(o.netler, rc)}</td>
+      <td class="px-3 py-3 text-center font-semibold tabular-nums" style="color:${netColor(o.sonNet)}">${o.sonNet}</td>
+      <td class="px-3 py-3">
+        <div class="flex items-center gap-2.5">
+          <div class="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div class="h-full rounded-full" style="width:${o.odev}%;background:${rc}"></div>
+          </div>
+          <span class="text-[12px] font-semibold text-zinc-400 tabular-nums w-9 text-right">%${o.odev}</span>
+        </div>
+      </td>
+      <td class="px-3 py-3 text-zinc-500 text-xs whitespace-nowrap">${o.sonGorusme}</td>
+      <td class="px-5 py-3 text-right">
+        <span class="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md" style="background:${rc}1f;color:${rc}">
+          <span class="w-1.5 h-1.5 rounded-full" style="background:${rc}"></span>${rl}
+        </span>
+      </td>
+      <td class="p-0"><div class="row-actions absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-ink-800/95 shadow-lg shadow-black/40 rounded-lg px-1 py-1 border border-white/[0.08]" onclick="event.stopPropagation()">
+        <button class="w-7 h-7 rounded-md hover:bg-white/[0.06] grid place-items-center text-zinc-400 hover:text-violet-400 transition" title="Mesaj"><i data-lucide="message-square" class="w-4 h-4"></i></button>
+        <button class="w-7 h-7 rounded-md hover:bg-white/[0.06] grid place-items-center text-zinc-400 hover:text-violet-400 transition" title="Odev ata"><i data-lucide="clipboard-plus" class="w-4 h-4"></i></button>
+        <button class="w-7 h-7 rounded-md hover:bg-white/[0.06] grid place-items-center text-zinc-400 hover:text-violet-400 transition" title="Gorusme"><i data-lucide="calendar-plus" class="w-4 h-4"></i></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCards(rows){
+  const w=document.getElementById('cardWrap');
+  if(!rows.length){ w.innerHTML=`<div class="col-span-full py-16 text-center text-zinc-500"><i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2"></i><p class="text-sm">Eslesen ogrenci yok.</p></div>`; return; }
+  w.innerHTML=rows.map(o=>{
+    const [rc,rl]=riskStyle[o.risk];
+    return `<div class="card card-hover rounded-2xl p-4 cursor-pointer" onclick="openModal(${o.id})">
+      <div class="flex items-center gap-3">
+        <img src="${avatarUrl(o.ad)}" class="w-11 h-11 rounded-xl ring-1 ring-white/10">
+        <div class="min-w-0 flex-1"><p class="font-semibold text-zinc-100 truncate">${o.ad}</p><p class="text-xs text-zinc-500 truncate">${o.sinif} &middot; ${o.hedef}</p></div>
+        <span class="px-2 py-1 rounded-md text-[11px] font-bold" style="background:${rc}1f;color:${rc}">${rl}</span>
+      </div>
+      <div class="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.06] text-sm">
+        <div><p class="text-[11px] text-zinc-600">Son Net</p><p class="font-bold tabular-nums" style="color:${netColor(o.sonNet)}">${o.sonNet}</p></div>
+        <div><p class="text-[11px] text-zinc-600">Odev</p><p class="font-bold tabular-nums" style="color:${rc}">%${o.odev}</p></div>
+        <div class="text-right"><p class="text-[11px] text-zinc-600 mb-1">Trend</p>${sparkline(o.netler, rc)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+const araEl=document.getElementById('ara');
+araEl.addEventListener('input', ()=>{ state.q=araEl.value; document.getElementById('araClear').classList.toggle('hidden', !araEl.value); render(); });
+function clearSearch(){ araEl.value=''; state.q=''; document.getElementById('araClear').classList.add('hidden'); render(); araEl.focus(); }
+
+function toggleRisk(r,el){
+  if(state.risk.has(r)){ state.risk.delete(r); el.classList.remove('on'); el.style.background=''; }
+  else { state.risk.add(r); el.classList.add('on'); el.style.background=riskChipColor[r]; }
+  render();
+}
+function clearFilters(){
+  state.risk=new Set(['kritik','dikkat','iyi']);
+  document.querySelectorAll('.chip[data-risk]').forEach(el=>{ el.classList.add('on'); el.style.background=riskChipColor[el.dataset.risk]; });
+  document.getElementById('fSinif').value=''; document.getElementById('fKoc').value='';
+  clearSearch();
+}
+
+function sortBy(k){ if(state.sort.key===k) state.sort.dir*=-1; else state.sort={key:k,dir:1}; render(); }
+
+function setView(v){ state.view=v;
+  const t=document.getElementById('viewTable'), c=document.getElementById('viewCard');
+  t.classList.toggle('bg-ink-700', v==='table'); t.classList.toggle('text-violet-400', v==='table'); t.classList.toggle('shadow-sm', v==='table');
+  c.classList.toggle('bg-ink-700', v==='card'); c.classList.toggle('text-violet-400', v==='card'); c.classList.toggle('shadow-sm', v==='card');
+  render();
+}
+function toggleDensity(){ state.dense=!state.dense; document.getElementById('content').classList.toggle('dense', state.dense); document.getElementById('densityBtn').classList.toggle('border-violet-500/40', state.dense); document.getElementById('densityBtn').classList.toggle('text-violet-400', state.dense); }
+
+function toggleSelect(id,el){ if(el.checked) state.selected.add(id); else state.selected.delete(id); updateBulk(); }
+function toggleSelectAll(el){ const rows=getRows(); if(el.checked) rows.forEach(o=>state.selected.add(o.id)); else state.selected.clear(); render(); }
+function clearSelection(){ state.selected.clear(); const sa=document.getElementById('selAll'); if(sa) sa.checked=false; render(); }
+function updateBulk(){
+  const n=state.selected.size, bar=document.getElementById('bulkBar');
+  bar.classList.toggle('hidden', n===0); bar.classList.toggle('flex', n>0);
+  document.getElementById('bulkCount').textContent=`${n} ogrenci secili`;
+}
+
+function isModalOpen(){ return !document.getElementById('ogrModal').classList.contains('hidden-modal'); }
+let trendChart=null, dersChart=null;
+function openModal(id){
+  const o=ogrenciler.find(x=>x.id===id); if(!o) return;
+  state.currentId=id; showTabUI('genel');
+  const [rc,rl]=riskStyle[o.risk];
+
+  document.getElementById('mAvatar').src=avatarUrl(o.ad);
+  const dot=document.getElementById('mAvatarDot');
+  dot.style.background=rc;
+  dot.innerHTML=`<i data-lucide="${o.risk==='kritik'?'alert-triangle':(o.risk==='dikkat'?'alert-circle':'check')}" class="w-3 h-3 text-ink-900"></i>`;
+  document.getElementById('mAd').textContent=o.ad;
+  document.getElementById('mSinif').textContent=o.sinif+" · "+o.puanTuru;
+  const mr=document.getElementById('mRisk'); mr.textContent=rl; mr.style.background=rc+"22"; mr.style.color=rc;
+  document.getElementById('mHedef').textContent=o.hedef;
+  document.getElementById('mKoc').textContent=o.koc;
+  document.getElementById('mIl').textContent=o.il;
+  document.getElementById('mVeli').textContent=o.veli;
+  document.getElementById('mTel').textContent=o.tel;
+  const idx=viewList.indexOf(id); document.getElementById('mPos').textContent = idx>=0 ? `${idx+1} / ${viewList.length}` : '';
+  document.getElementById('mKpiNet').textContent=o.sonNet;
+  document.getElementById('mKpiOdev').textContent="%"+o.odev;
+  document.getElementById('mKpiDev').textContent=o.devamsizlik;
+  document.getElementById('mKpiMood').textContent=o.mood;
+
+  renderNotes(o);
+
+  // Mood bars
+  document.getElementById('mMoodlar').innerHTML=o.moodlar.map((m,i)=>{
+    const gun=["Pzt","Sal","Car","Per","Cum","Cmt","Paz"][i];
+    const c=m>=4?'#34d399':(m>=3?'#fbbf24':'#f87171');
+    return `<div class="flex flex-col items-center gap-1 flex-1">
+      <div class="w-full rounded-t-md transition-all" style="height:${m*16}px;background:linear-gradient(180deg, ${c}, ${c}88)"></div>
+      <span class="text-[11px]">${moodFace[m-1]}</span>
+      <span class="text-[9px] text-zinc-600">${gun}</span>
+    </div>`;
+  }).join('');
+
+  // Deneme gecmisi tablosu (degisim ile)
+  document.getElementById('mDenemeTablo').innerHTML=o.netler.map((n,i)=>{
+    const d=i>0?+(n-o.netler[i-1]).toFixed(1):0, dc=d>0?'#34d399':(d<0?'#f87171':'#71717a'), ds=d>0?'+'+d:(d<0?''+d:'—');
+    return `<tr><td class="px-4 py-2.5 text-zinc-300">${i+1}. Deneme</td><td class="px-4 py-2.5 text-right font-semibold text-zinc-200 tabular-nums">${n}</td><td class="px-4 py-2.5 text-right font-medium tabular-nums" style="color:${dc}">${ds}</td></tr>`;
+  }).reverse().join('');
+
+  // Tum odevler
+  document.getElementById('mOdevlerFull').innerHTML=o.odevler.map(([ad,durum,tip])=>{
+    const c=tip==='ok'?'#34d399':(tip==='late'?'#f87171':'#fbbf24');
+    const ic=tip==='ok'?'check-circle-2':(tip==='late'?'alert-circle':'clock');
+    const cb=tip==='ok'?'bg-emerald-500/10':(tip==='late'?'bg-rose-500/10':'bg-amber-500/10');
+    return `<div class="flex items-center gap-3 p-3 rounded-xl bg-ink-800 border border-white/[0.05]">
+      <div class="w-7 h-7 rounded-lg grid place-items-center shrink-0 ${cb}"><i data-lucide="${ic}" class="w-3.5 h-3.5" style="color:${c}"></i></div>
+      <span class="flex-1 text-[13px] text-zinc-300">${ad}</span>
+      <span class="text-[11px] font-semibold whitespace-nowrap" style="color:${c}">${durum}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ogrModal').classList.remove('hidden-modal');
+  lucide.createIcons();
+
+  const axisColor = '#71717a';
+  const gridColor = 'rgba(255,255,255,0.05)';
+
+  if(trendChart) trendChart.destroy();
+  trendChart = new ApexCharts(document.getElementById('mTrend'), {
+    series:[{name:'Net', data:o.netler}],
+    chart:{type:'area', height:158, width:'100%', background:'transparent', toolbar:{show:false}, fontFamily:'Plus Jakarta Sans'},
+    stroke:{curve:'smooth', width:3},
+    colors:['#8b5cf6'],
+    fill:{type:'gradient', gradient:{shadeIntensity:1, opacityFrom:.35, opacityTo:0, stops:[0,90]}},
+    dataLabels:{enabled:false},
+    xaxis:{categories:['D1','D2','D3','D4','D5','D6','D7','D8'], labels:{style:{colors:axisColor, fontSize:'10px'}}, axisBorder:{color:gridColor}, axisTicks:{color:gridColor}},
+    yaxis:{labels:{style:{colors:axisColor, fontSize:'10px'}}},
+    grid:{borderColor:gridColor, strokeDashArray:4},
+    tooltip:{theme:'dark', y:{formatter:v=>v+' net'}},
+    markers:{size:0, hover:{size:5}}
+  }); trendChart.render();
+
+  if(dersChart) dersChart.destroy();
+  dersChart = new ApexCharts(document.getElementById('mDers'), {
+    series:[{name:'Net', data:Object.values(o.ders)}],
+    chart:{type:'bar', height:158, width:'100%', background:'transparent', toolbar:{show:false}, fontFamily:'Plus Jakarta Sans'},
+    plotOptions:{bar:{horizontal:true, borderRadius:5, barHeight:'62%', distributed:true}},
+    colors:['#8b5cf6','#a78bfa','#7c3aed','#38bdf8'],
+    dataLabels:{enabled:true, style:{fontSize:'11px', fontWeight:600, colors:['#e4e4e7']}, offsetX:4},
+    xaxis:{categories:Object.keys(o.ders), labels:{style:{colors:axisColor, fontSize:'10px'}}, axisBorder:{color:gridColor}, axisTicks:{color:gridColor}},
+    yaxis:{labels:{style:{colors:axisColor, fontSize:'10px'}}},
+    grid:{borderColor:gridColor, strokeDashArray:4},
+    legend:{show:false},
+    tooltip:{theme:'dark', y:{formatter:v=>v+' net'}}
+  }); dersChart.render();
+}
+
+function renderNotes(o){
+  const box=document.getElementById('mNotlar');
+  box.innerHTML = o.notlar.length ? o.notlar.map(n=>`<div class="flex items-start gap-2 text-sm p-2 rounded-lg bg-ink-800 border border-white/[0.05]"><i data-lucide="sticky-note" class="w-4 h-4 text-violet-400 mt-0.5 shrink-0"></i><span class="text-zinc-300">${n}</span></div>`).join('') : `<p class="text-xs text-zinc-600">Henuz not yok.</p>`;
+  lucide.createIcons();
+}
+function addNote(){
+  const inp=document.getElementById('notInput'), v=inp.value.trim(); if(!v) return;
+  const o=ogrenciler.find(x=>x.id===state.currentId); o.notlar.unshift(v); inp.value=''; renderNotes(o);
+}
+function navStudent(dir){
+  if(!viewList.length) return;
+  let idx=viewList.indexOf(state.currentId); idx=(idx+dir+viewList.length)%viewList.length;
+  openModal(viewList[idx]);
+}
+function showTab(t){ showTabUI(t); }
+function showTabUI(t){
+  state.tab=t;
+  ['genel','denemeler','odevler'].forEach(x=>document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('hidden', x!==t));
+  document.querySelectorAll('.tabbtn').forEach(b=>{ const on=b.dataset.tab===t; b.classList.toggle('on',on); });
+}
+function closeModal(){ document.getElementById('ogrModal').classList.add('hidden-modal'); }
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='/' && document.activeElement.tagName!=='INPUT' && document.activeElement.tagName!=='SELECT' && !isModalOpen()){ e.preventDefault(); araEl.focus(); return; }
+  if(e.key==='Escape' && document.body.classList.contains('drawer-open')){ closeDrawer(); return; }
+  if(!isModalOpen()) return;
+  const inField=/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName);
+  if(e.key==='Escape') closeModal();
+  else if(e.key==='ArrowLeft' && !inField) navStudent(-1);
+  else if(e.key==='ArrowRight' && !inField) navStudent(1);
+});
+
+// Mobilde varsayilan Kart gorunumu; masaustunde Tablo (esik: lg 1024px)
+if (window.matchMedia('(max-width: 1023px)').matches) {
+  setView('card');
+} else {
+  setView('table');
+}
+render();
+</script>
+</body>
+</html>

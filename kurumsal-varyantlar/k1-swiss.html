@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KocTakip — Yonetici Ana Paneli</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'] },
+      fontWeight: { '400':'400', '500':'500', '600':'600', '700':'700', '800':'800', '900':'900' },
+      colors: {
+        ink: '#0a0a0a',
+        paper: '#fafafa',
+        rule: '#e4e4e4',
+        rulehard: '#0a0a0a',
+        red: '#c0392b',
+        redink: '#a5281b',
+        mute: '#6b6b6b'
+      }
+    }
+  }
+}
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  .num { font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
+  .tracktight { letter-spacing: -0.04em; }
+  .tracktighter { letter-spacing: -0.055em; }
+  .trackwide { letter-spacing: 0.18em; }
+  .trackwider { letter-spacing: 0.28em; }
+  .hairline { border-color: #e4e4e4; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #fafafa; }
+  ::-webkit-scrollbar-thumb { background: #d4d4d4; border: 3px solid #fafafa; }
+  ::-webkit-scrollbar-thumb:hover { background: #b0b0b0; }
+  .navitem { position: relative; }
+  .navitem[data-active="true"]::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #c0392b;
+  }
+  .rulehatch {
+    background-image: repeating-linear-gradient(-45deg, #0a0a0a 0 1px, transparent 1px 6px);
+  }
+  .apexcharts-tooltip {
+    border: 1px solid #0a0a0a !important; border-radius: 0 !important;
+    box-shadow: none !important; font-family: '"Hanken Grotesk"', sans-serif !important;
+  }
+  .apexcharts-tooltip-title {
+    background: #0a0a0a !important; color: #fff !important; border: 0 !important;
+    font-weight: 700 !important; letter-spacing: 0.02em;
+  }
+  .map-dot { transition: transform .2s ease, fill .2s ease; }
+  .map-region:hover .map-dot { transform: scale(1.4); }
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+
+  /* ============================================================
+     DESKTOP / TABLET DRAWER (kept as-is: <=1023px sidebar becomes drawer)
+     ============================================================ */
+  @media (max-width: 1023px) {
+    #sidebar { position: fixed !important; inset: 0 auto 0 0 !important; transform: translateX(-100%) !important; transition: transform .25s ease; z-index: 60; box-shadow: 0 0 40px rgba(0,0,0,.12); }
+    #sidebar.open { transform: translateX(0) !important; }
+    #scrim { display: none; }
+    #scrim.open { display: block; }
+  }
+
+  /* ============================================================
+     MOBILE APP EXPERIENCE (<=1023px)  — additive, desktop untouched
+     ============================================================ */
+  /* Hide native scrollbar for horizontal chip rows */
+  .noscroll::-webkit-scrollbar { display: none; }
+  .noscroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+  @media (max-width: 1023px) {
+    /* Full-bleed app frame: no window padding / radius / margin */
+    body { overflow-x: hidden; }
+    #main-scroll { padding-left: 0 !important; padding-right: 0 !important; }
+    #main-inner { padding-left: 16px !important; padding-right: 16px !important; padding-top: 20px !important; }
+
+    /* Mobile drawer sizing (comfortable, near full width) */
+    #sidebar { width: 84vw !important; max-width: 320px !important; }
+
+    /* Desktop topbar hidden, mobile topbar shown */
+    #desktop-topbar { display: none !important; }
+    #mobile-topbar { display: flex !important; }
+
+    /* Body text floor for readability */
+    main { font-size: 14px; }
+
+    /* Table -> hidden, card list shown */
+    #teacherTableWrap { display: none; }
+    #teacherCards { display: block; }
+
+    /* Charts full width, never overflow */
+    #scoreChart, #gradeChart { overflow: hidden; }
+
+    /* Touch targets */
+    .navitem { padding-top: 12px; padding-bottom: 12px; }
+  }
+  @media (min-width: 1024px) {
+    #mobile-topbar { display: none !important; }
+    #teacherCards { display: none; }
+    #mobileSearchPanel { display: none !important; }
+  }
+</style>
+</head>
+<body class="bg-white text-ink font-sans antialiased">
+
+<div class="flex min-h-screen">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside id="sidebar" class="w-[248px] shrink-0 border-r border-rule bg-white flex flex-col">
+    <!-- Brand -->
+    <div class="h-[76px] border-b border-rulehard flex items-center px-6">
+      <div class="flex items-baseline gap-2">
+        <span class="w-2.5 h-2.5 bg-red block translate-y-[-1px]"></span>
+        <span class="text-[19px] font-900 tracktighter leading-none">KocTakip</span>
+      </div>
+      <span class="ml-auto text-[9px] font-700 trackwider text-mute">v2.4</span>
+      <!-- Mobile close (drawer) -->
+      <button onclick="toggleNav()" class="lg:hidden ml-3 -mr-1 w-9 h-9 grid place-items-center border border-rule active:bg-paper" aria-label="Menuyu kapat">
+        <i data-lucide="x" class="w-[18px] h-[18px]"></i>
+      </button>
+    </div>
+
+    <!-- Nav -->
+    <nav class="flex-1 py-6 overflow-y-auto">
+      <p class="px-6 mb-3 text-[10px] font-800 trackwider text-mute">YONETIM</p>
+      <ul class="text-[13.5px] font-500">
+        <li><a href="#" data-active="true" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 bg-paper font-700">
+          <i data-lucide="layout-dashboard" class="w-[17px] h-[17px] text-red"></i> Genel Bakis</a></li>
+        <li><a href="#" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink/80 hover:bg-paper hover:text-ink">
+          <i data-lucide="users" class="w-[17px] h-[17px] text-mute"></i> Ogretmenler</a></li>
+        <li><a href="#" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink/80 hover:bg-paper hover:text-ink">
+          <i data-lucide="graduation-cap" class="w-[17px] h-[17px] text-mute"></i> Ogrenciler</a></li>
+        <li><a href="#" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink/80 hover:bg-paper hover:text-ink">
+          <i data-lucide="book-open" class="w-[17px] h-[17px] text-mute"></i> Dersler</a></li>
+        <li><a href="#" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink/80 hover:bg-paper hover:text-ink">
+          <i data-lucide="clipboard-list" class="w-[17px] h-[17px] text-mute"></i> Odevler</a></li>
+        <li><a href="#" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink/80 hover:bg-paper hover:text-ink">
+          <i data-lucide="file-check-2" class="w-[17px] h-[17px] text-mute"></i> Denemeler</a></li>
+        <li><a href="#" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink/80 hover:bg-paper hover:text-ink">
+          <i data-lucide="brain" class="w-[17px] h-[17px] text-mute"></i> Psikolojik Testler</a></li>
+        <li><a href="#" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink/80 hover:bg-paper hover:text-ink">
+          <i data-lucide="calendar-days" class="w-[17px] h-[17px] text-mute"></i> Ajanda</a></li>
+      </ul>
+      <div class="px-6 my-5 border-t border-rule"></div>
+      <p class="px-6 mb-3 text-[10px] font-800 trackwider text-mute">SISTEM</p>
+      <ul class="text-[13.5px] font-500">
+        <li><a href="#" onclick="closeNav()" class="navitem flex items-center gap-3 pl-6 pr-4 py-2.5 text-ink/80 hover:bg-paper hover:text-ink">
+          <i data-lucide="settings-2" class="w-[17px] h-[17px] text-mute"></i> Kurum Ayarlari</a></li>
+      </ul>
+    </nav>
+
+    <!-- Bottom card -->
+    <div class="border-t border-rule p-4">
+      <div class="border border-rulehard p-3">
+        <p class="text-[10px] font-800 trackwider text-mute mb-1">DONEM</p>
+        <p class="text-[13px] font-700 tracktight leading-tight">2025 — 2026<br>Guz Yariyili</p>
+        <div class="mt-2 h-px bg-rule"></div>
+        <p class="mt-2 text-[11px] text-mute num">Senkron · 14:32</p>
+      </div>
+    </div>
+  </aside>
+  <div id="scrim" class="fixed inset-0 bg-black/30 z-50" onclick="toggleNav()"></div>
+
+  <!-- ============ MAIN ============ -->
+  <div class="flex-1 min-w-0 flex flex-col">
+
+    <!-- ===== MOBILE TOPBAR (<=1023px) ===== -->
+    <header id="mobile-topbar" class="hidden h-14 border-b border-rulehard bg-white/95 backdrop-blur sticky top-0 z-30 items-center gap-2 px-4">
+      <button onclick="toggleNav()" class="-ml-1 w-10 h-10 grid place-items-center active:bg-paper" aria-label="Menu">
+        <i data-lucide="menu" class="w-6 h-6"></i>
+      </button>
+      <div class="flex items-baseline gap-2 mx-auto">
+        <span class="w-2.5 h-2.5 bg-red block translate-y-[-1px]"></span>
+        <span class="text-[18px] font-900 tracktighter leading-none">KocTakip</span>
+      </div>
+      <button onclick="toggleMobileSearch()" class="w-10 h-10 grid place-items-center active:bg-paper" aria-label="Ara">
+        <i data-lucide="search" class="w-[22px] h-[22px]"></i>
+      </button>
+      <button class="relative w-10 h-10 grid place-items-center active:bg-paper" aria-label="Bildirimler">
+        <i data-lucide="bell" class="w-[22px] h-[22px]"></i>
+        <span class="absolute top-2 right-2 w-2 h-2 bg-red"></span>
+      </button>
+    </header>
+
+    <!-- Mobile expandable search panel -->
+    <div id="mobileSearchPanel" class="hidden border-b border-rule bg-white sticky top-14 z-20 px-4 py-2.5">
+      <div class="flex items-center gap-3 border border-rule focus-within:border-ink px-3 h-11">
+        <i data-lucide="search" class="w-4 h-4 text-mute"></i>
+        <input id="mobileSearchInput" type="text" placeholder="Ogretmen, ogrenci, ders ara…" class="w-full bg-transparent text-[15px] outline-none placeholder:text-mute">
+        <button onclick="toggleMobileSearch()" class="text-mute" aria-label="Kapat"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+
+    <!-- ===== DESKTOP TOPBAR (>=1024px) ===== -->
+    <header id="desktop-topbar" class="h-[76px] border-b border-rulehard bg-white/95 backdrop-blur sticky top-0 z-30 flex items-center gap-4 px-5 sm:px-8">
+      <button onclick="toggleNav()" class="lg:hidden -ml-1 p-2 border border-rule" aria-label="Menu"><i data-lucide="menu" class="w-5 h-5"></i></button>
+
+      <div class="hidden sm:flex items-center gap-3 flex-1 max-w-[420px] border border-rule focus-within:border-ink px-3 h-10">
+        <i data-lucide="search" class="w-4 h-4 text-mute"></i>
+        <input type="text" placeholder="Ogretmen, ogrenci, ders ara…" class="w-full bg-transparent text-[13px] outline-none placeholder:text-mute">
+        <kbd class="text-[10px] font-700 text-mute border border-rule px-1.5 py-0.5">/</kbd>
+      </div>
+
+      <div class="flex items-center gap-2 ml-auto">
+        <button class="relative w-10 h-10 border border-rule hover:border-ink grid place-items-center">
+          <i data-lucide="bell" class="w-[18px] h-[18px]"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red"></span>
+        </button>
+        <div class="hidden sm:block w-px h-8 bg-rule mx-1"></div>
+        <div class="flex items-center gap-3 pl-1">
+          <div class="w-10 h-10 bg-ink text-white grid place-items-center text-[13px] font-800 tracktight">MK</div>
+          <div class="hidden md:block leading-tight">
+            <p class="text-[13px] font-700 tracktight">Merve Karadeniz</p>
+            <p class="text-[11px] text-mute">Kurum Yoneticisi</p>
+          </div>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-mute hidden md:block"></i>
+        </div>
+      </div>
+    </header>
+
+    <div id="main-scroll" class="flex-1 px-5 sm:px-8">
+    <main id="main-inner" class="flex-1 py-8 max-w-[1560px] w-full">
+
+      <!-- Page head -->
+      <div class="flex flex-wrap items-end justify-between gap-4 pb-6 mb-8 border-b border-rulehard">
+        <div>
+          <p class="text-[11px] font-800 trackwider text-red mb-2">GENEL BAKIS · YONETICI PANELI</p>
+          <h1 class="text-[32px] sm:text-[46px] font-900 tracktighter leading-[0.95]">Kurum Ozeti</h1>
+        </div>
+        <div class="flex items-end gap-6">
+          <div class="text-left sm:text-right">
+            <p class="text-[10px] font-800 trackwider text-mute">RAPOR TARIHI</p>
+            <p class="text-[15px] font-700 tracktight num">01 Temmuz 2026</p>
+          </div>
+          <div class="text-left sm:text-right border-l border-rule pl-6">
+            <p class="text-[10px] font-800 trackwider text-mute">PERIYOT</p>
+            <p class="text-[15px] font-700 tracktight">Son 30 Gun</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== KPI ROW ===== -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 border-t border-l border-rule mb-10">
+        <!-- 01 -->
+        <div class="group border-r border-b border-rule p-6 relative bg-white hover:bg-paper transition-colors">
+          <div class="flex items-start justify-between">
+            <span class="text-[11px] font-800 num text-mute">01</span>
+            <i data-lucide="users" class="w-[18px] h-[18px] text-ink"></i>
+          </div>
+          <p class="mt-4 text-[11px] font-800 trackwider text-mute">TOPLAM OGRETMEN</p>
+          <p class="mt-1 text-[48px] sm:text-[54px] font-900 tracktighter leading-none num">48</p>
+          <div class="mt-4 pt-3 border-t border-rule flex items-center gap-2">
+            <i data-lucide="arrow-up-right" class="w-4 h-4 text-ink"></i>
+            <span class="text-[13px] font-800 num">+3</span>
+            <span class="text-[12px] text-mute">bu donem · <span class="num">+6,7%</span></span>
+          </div>
+        </div>
+        <!-- 02 -->
+        <div class="group border-r border-b border-rule p-6 relative bg-white hover:bg-paper transition-colors">
+          <div class="flex items-start justify-between">
+            <span class="text-[11px] font-800 num text-mute">02</span>
+            <i data-lucide="graduation-cap" class="w-[18px] h-[18px] text-ink"></i>
+          </div>
+          <p class="mt-4 text-[11px] font-800 trackwider text-mute">TOPLAM OGRENCI</p>
+          <p class="mt-1 text-[48px] sm:text-[54px] font-900 tracktighter leading-none num">1.240</p>
+          <div class="mt-4 pt-3 border-t border-rule flex items-center gap-2">
+            <i data-lucide="arrow-up-right" class="w-4 h-4 text-ink"></i>
+            <span class="text-[13px] font-800 num">+128</span>
+            <span class="text-[12px] text-mute">bu donem · <span class="num">+11,5%</span></span>
+          </div>
+        </div>
+        <!-- 03 -->
+        <div class="group border-r border-b border-rule p-6 relative bg-white hover:bg-paper transition-colors">
+          <div class="flex items-start justify-between">
+            <span class="text-[11px] font-800 num text-mute">03</span>
+            <i data-lucide="book-open" class="w-[18px] h-[18px] text-ink"></i>
+          </div>
+          <p class="mt-4 text-[11px] font-800 trackwider text-mute">TOPLAM DERS</p>
+          <p class="mt-1 text-[48px] sm:text-[54px] font-900 tracktighter leading-none num">12</p>
+          <div class="mt-4 pt-3 border-t border-rule flex items-center gap-2">
+            <span class="w-4 h-[2px] bg-mute inline-block"></span>
+            <span class="text-[13px] font-800 num text-mute">0</span>
+            <span class="text-[12px] text-mute">degisim yok</span>
+          </div>
+        </div>
+        <!-- 04 -->
+        <div class="group border-r border-b border-rule p-6 relative bg-white hover:bg-paper transition-colors">
+          <div class="flex items-start justify-between">
+            <span class="text-[11px] font-800 num text-red">04</span>
+            <i data-lucide="activity" class="w-[18px] h-[18px] text-red"></i>
+          </div>
+          <p class="mt-4 text-[11px] font-800 trackwider text-mute">AKTIF KULLANICI</p>
+          <p class="mt-1 text-[48px] sm:text-[54px] font-900 tracktighter leading-none num text-red">320</p>
+          <div class="mt-4 pt-3 border-t border-rule flex items-center gap-2">
+            <i data-lucide="arrow-down-right" class="w-4 h-4 text-red"></i>
+            <span class="text-[13px] font-800 num text-red">−18</span>
+            <span class="text-[12px] text-mute">son 7 gun · <span class="num text-red">−5,3%</span></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ROW: TABLE + CHARTS ===== -->
+      <section class="grid grid-cols-1 xl:grid-cols-12 gap-10 mb-10">
+
+        <!-- Teacher performance table -->
+        <div class="xl:col-span-7">
+          <div class="flex items-end justify-between mb-4 pb-3 border-b border-rulehard">
+            <div>
+              <p class="text-[11px] font-800 trackwider text-red mb-1">TABLO A</p>
+              <h2 class="text-[22px] font-900 tracktight leading-none">Ogretmen Performansi</h2>
+            </div>
+            <a href="#" class="text-[12px] font-700 flex items-center gap-1 hover:text-red">Tamami <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+          </div>
+
+          <!-- Desktop / tablet: table (horizontal scroll wrapper preserved) -->
+          <div id="teacherTableWrap" class="overflow-x-auto">
+            <table class="w-full text-[13px] num border-collapse min-w-[640px]">
+              <thead>
+                <tr class="text-left text-[10px] font-800 trackwide text-mute border-b border-rule">
+                  <th class="py-2.5 pr-3 font-800">AD SOYAD</th>
+                  <th class="py-2.5 px-3 text-right font-800">OGRENCI</th>
+                  <th class="py-2.5 px-3 text-right font-800">ODEV</th>
+                  <th class="py-2.5 px-3 font-800 w-[150px]">TAMAMLAMA</th>
+                  <th class="py-2.5 pl-3 text-right font-800">GECIKEN</th>
+                </tr>
+              </thead>
+              <tbody id="teacherRows"></tbody>
+            </table>
+          </div>
+
+          <!-- Mobile: card list (no horizontal overflow) -->
+          <ul id="teacherCards" class="hidden"></ul>
+        </div>
+
+        <!-- Two charts stacked -->
+        <div class="xl:col-span-5 flex flex-col gap-8">
+          <div class="border border-rule">
+            <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-rule">
+              <div>
+                <p class="text-[10px] font-800 trackwider text-mute mb-0.5">GRAFIK B</p>
+                <h3 class="text-[15px] font-800 tracktight">Puan Turu Dagilimi</h3>
+              </div>
+              <span class="text-[11px] font-700 text-mute num">n=1.240</span>
+            </div>
+            <div id="scoreChart" class="px-2 pb-2"></div>
+          </div>
+
+          <div class="border border-rule">
+            <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-rule">
+              <div>
+                <p class="text-[10px] font-800 trackwider text-mute mb-0.5">GRAFIK C</p>
+                <h3 class="text-[15px] font-800 tracktight">Sinif Dagilimi</h3>
+              </div>
+              <span class="text-[11px] font-700 text-mute num">n=1.240</span>
+            </div>
+            <div id="gradeChart" class="px-2 pb-3 pt-2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ROW: ACTIVITY + SYSTEM HEALTH + MAP ===== -->
+      <section class="grid grid-cols-1 xl:grid-cols-12 gap-10">
+
+        <!-- Activity feed -->
+        <div class="xl:col-span-4">
+          <div class="flex items-end justify-between mb-4 pb-3 border-b border-rulehard">
+            <div>
+              <p class="text-[11px] font-800 trackwider text-red mb-1">AKIS</p>
+              <h2 class="text-[22px] font-900 tracktight leading-none">Son Eklenenler</h2>
+            </div>
+          </div>
+          <ul id="activityFeed" class="text-[13px]"></ul>
+        </div>
+
+        <!-- System health -->
+        <div class="xl:col-span-3">
+          <div class="flex items-end justify-between mb-4 pb-3 border-b border-rulehard">
+            <div>
+              <p class="text-[11px] font-800 trackwider text-red mb-1">DENETIM</p>
+              <h2 class="text-[22px] font-900 tracktight leading-none">Sistem Sagligi</h2>
+            </div>
+          </div>
+          <ul class="divide-y divide-rule border-b border-rule">
+            <li class="flex items-center justify-between py-4">
+              <div class="flex items-center gap-3">
+                <span class="w-2 h-2 bg-ink"></span>
+                <span class="text-[13px] font-600">Aktif Kullanici</span>
+              </div>
+              <span class="text-[22px] font-900 tracktight num">320</span>
+            </li>
+            <li class="flex items-center justify-between py-4">
+              <div class="flex items-center gap-3">
+                <span class="w-2 h-2 bg-mute"></span>
+                <span class="text-[13px] font-600">Pasif Ogrenci</span>
+              </div>
+              <span class="text-[22px] font-900 tracktight num">147</span>
+            </li>
+            <li class="flex items-center justify-between py-4">
+              <div class="flex items-center gap-3">
+                <span class="w-2 h-2 bg-mute"></span>
+                <span class="text-[13px] font-600">Pasif Ogretmen</span>
+              </div>
+              <span class="text-[22px] font-900 tracktight num">6</span>
+            </li>
+            <li class="flex items-center justify-between py-4">
+              <div class="flex items-center gap-3">
+                <span class="w-2 h-2 bg-red"></span>
+                <span class="text-[13px] font-600">Hic Giris Yapmayan</span>
+              </div>
+              <span class="text-[22px] font-900 tracktight num text-red">23</span>
+            </li>
+          </ul>
+          <p class="mt-4 text-[11px] text-mute leading-relaxed">
+            Pasiflik esigi: <span class="num">14 gun</span> boyunca oturum acmayan hesaplar.
+          </p>
+        </div>
+
+        <!-- Il bazli dagilim + map placeholder -->
+        <div class="xl:col-span-5">
+          <div class="flex items-end justify-between mb-4 pb-3 border-b border-rulehard">
+            <div>
+              <p class="text-[11px] font-800 trackwider text-red mb-1">COGRAFYA</p>
+              <h2 class="text-[22px] font-900 tracktight leading-none">Il Bazli Dagilim</h2>
+            </div>
+            <span class="text-[11px] font-700 text-mute">32 il</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-0 border border-rule">
+            <!-- Map placeholder -->
+            <div class="sm:col-span-3 relative border-b sm:border-b-0 sm:border-r border-rule">
+              <div class="absolute top-3 left-3 z-10">
+                <span class="text-[9px] font-800 trackwider text-mute bg-white px-1.5 py-0.5 border border-rule">HARITA · YER TUTUCU</span>
+              </div>
+              <!-- Stylized abstract Turkey silhouette placeholder with density dots -->
+              <div class="aspect-[16/10] w-full grid place-items-center p-4 rulehatch bg-white/50" style="background-size: 8px 8px;">
+                <svg viewBox="0 0 320 150" class="w-full h-full" role="img" aria-label="Turkiye haritasi yer tutucu">
+                  <rect x="0" y="0" width="320" height="150" fill="#ffffff"/>
+                  <!-- schematic Turkey outline -->
+                  <path d="M28,74 L54,58 L92,52 L128,50 L172,48 L214,52 L252,50 L288,58 L300,72 L288,92 L250,100 L206,98 L166,102 L120,100 L82,96 L48,90 Z"
+                        fill="#f2f2f2" stroke="#0a0a0a" stroke-width="1.5" stroke-linejoin="round"/>
+                  <!-- density dots -->
+                  <g class="map-region"><circle cx="86" cy="76" r="9" class="map-dot" fill="#c0392b" opacity="0.9"/></g>
+                  <g class="map-region"><circle cx="128" cy="70" r="7.5" class="map-dot" fill="#c0392b" opacity="0.75"/></g>
+                  <g class="map-region"><circle cx="196" cy="72" r="6" class="map-dot" fill="#0a0a0a" opacity="0.85"/></g>
+                  <g class="map-region"><circle cx="238" cy="76" r="5" class="map-dot" fill="#0a0a0a" opacity="0.7"/></g>
+                  <g class="map-region"><circle cx="266" cy="80" r="4" class="map-dot" fill="#0a0a0a" opacity="0.55"/></g>
+                  <g class="map-region"><circle cx="108" cy="86" r="4.5" class="map-dot" fill="#0a0a0a" opacity="0.6"/></g>
+                  <text x="160" y="132" text-anchor="middle" font-size="8" fill="#6b6b6b" font-family="Hanken Grotesk" letter-spacing="2">GERCEK HARITA SONRADAN GOMULECEK</text>
+                </svg>
+              </div>
+              <!-- Legend -->
+              <div class="flex items-center gap-4 px-4 py-2.5 border-t border-rule text-[10px] font-700 text-mute">
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-red"></span>Yuksek</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-ink"></span>Orta</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-ink/40"></span>Dusuk</span>
+              </div>
+            </div>
+
+            <!-- En yogun iller list -->
+            <div class="sm:col-span-2 p-4">
+              <p class="text-[10px] font-800 trackwider text-mute mb-3">EN YOGUN ILLER</p>
+              <ul id="cityList" class="text-[13px] num"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer rule -->
+      <footer class="mt-12 pt-5 border-t border-rulehard flex flex-wrap items-center justify-between gap-3 text-[11px] text-mute">
+        <p class="font-700">KocTakip — Ogrenci Kocluk & Takip Sistemi</p>
+        <p class="num">© 2026 · Panel v2.4 · Son senkronizasyon 14:32</p>
+      </footer>
+
+    </main>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- ICONS ----------
+lucide.createIcons();
+
+// ---------- NAV TOGGLE ----------
+function toggleNav(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('scrim').classList.toggle('open');
+}
+function closeNav(){
+  // Only auto-close when the drawer is actually active (mobile/tablet)
+  const sb = document.getElementById('sidebar');
+  if (sb.classList.contains('open')) {
+    sb.classList.remove('open');
+    document.getElementById('scrim').classList.remove('open');
+  }
+}
+
+// ---------- MOBILE SEARCH TOGGLE ----------
+function toggleMobileSearch(){
+  const p = document.getElementById('mobileSearchPanel');
+  const willShow = p.classList.contains('hidden');
+  p.classList.toggle('hidden');
+  if (willShow) {
+    const inp = document.getElementById('mobileSearchInput');
+    if (inp) setTimeout(()=>inp.focus(), 50);
+  }
+}
+
+// Close drawer with Escape
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape') closeNav();
+});
+
+// ---------- TEACHER TABLE ----------
+const teachers = [
+  { name:'Elif Sahin',        students:64, done:412, assigned:440, delayed:12 },
+  { name:'Mert Yildirim',     students:58, done:388, assigned:401, delayed:5  },
+  { name:'Zeynep Aydin',      students:71, done:503, assigned:560, delayed:24 },
+  { name:'Burak Demir',       students:49, done:274, assigned:320, delayed:18 },
+  { name:'Ayse Kurt',         students:66, done:479, assigned:495, delayed:7  },
+  { name:'Emre Ozturk',       students:53, done:301, assigned:388, delayed:31 },
+  { name:'Selin Arslan',      students:60, done:441, assigned:452, delayed:4  },
+  { name:'Kaan Celik',        students:45, done:230, assigned:300, delayed:26 },
+];
+const tbody = document.getElementById('teacherRows');
+const tcards = document.getElementById('teacherCards');
+teachers.forEach((t, i) => {
+  const rate = Math.round((t.done / t.assigned) * 100);
+  const low = rate < 80;
+  const initials = t.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+
+  // --- desktop/tablet table row ---
+  const tr = document.createElement('tr');
+  tr.className = 'border-b border-rule hover:bg-paper transition-colors';
+  tr.innerHTML = `
+    <td class="py-3 pr-3">
+      <div class="flex items-center gap-3">
+        <span class="w-7 h-7 grid place-items-center text-[11px] font-800 tracktight ${low?'bg-red text-white':'bg-ink text-white'}">${initials}</span>
+        <span class="font-700 tracktight text-[13.5px]">${t.name}</span>
+      </div>
+    </td>
+    <td class="py-3 px-3 text-right font-600">${t.students}</td>
+    <td class="py-3 px-3 text-right text-mute"><span class="text-ink font-700">${t.done}</span>/${t.assigned}</td>
+    <td class="py-3 px-3">
+      <div class="flex items-center gap-2.5">
+        <div class="flex-1 h-[7px] bg-rule relative">
+          <div class="absolute inset-y-0 left-0 ${low?'bg-red':'bg-ink'}" style="width:${rate}%"></div>
+        </div>
+        <span class="w-9 text-right font-800 tracktight ${low?'text-red':''}">%${rate}</span>
+      </div>
+    </td>
+    <td class="py-3 pl-3 text-right ${t.delayed>=20?'text-red font-800':'font-600'}">${t.delayed}</td>
+  `;
+  tbody.appendChild(tr);
+
+  // --- mobile card ---
+  const li = document.createElement('li');
+  li.className = 'num border-b border-rule py-4 first:pt-0';
+  li.innerHTML = `
+    <div class="flex items-center gap-3 mb-3">
+      <span class="w-9 h-9 shrink-0 grid place-items-center text-[12px] font-800 tracktight ${low?'bg-red text-white':'bg-ink text-white'}">${initials}</span>
+      <span class="font-700 tracktight text-[15px] flex-1 min-w-0 truncate">${t.name}</span>
+      <span class="text-[13px] font-800 tracktight ${low?'text-red':''}">%${rate}</span>
+    </div>
+    <div class="h-[7px] bg-rule relative mb-3">
+      <div class="absolute inset-y-0 left-0 ${low?'bg-red':'bg-ink'}" style="width:${rate}%"></div>
+    </div>
+    <div class="grid grid-cols-3 gap-2 text-[13px]">
+      <div>
+        <p class="text-[10px] font-800 trackwide text-mute mb-0.5">OGRENCI</p>
+        <p class="font-700">${t.students}</p>
+      </div>
+      <div>
+        <p class="text-[10px] font-800 trackwide text-mute mb-0.5">ODEV</p>
+        <p class="text-mute"><span class="text-ink font-700">${t.done}</span>/${t.assigned}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-[10px] font-800 trackwide text-mute mb-0.5">GECIKEN</p>
+        <p class="${t.delayed>=20?'text-red font-800':'font-700'}">${t.delayed}</p>
+      </div>
+    </div>
+  `;
+  tcards.appendChild(li);
+});
+
+// ---------- ACTIVITY FEED ----------
+const activity = [
+  { t:'Yeni ogretmen kaydi', s:'Derya Balci · Matematik', time:'12 dk once', ico:'user-plus', red:true },
+  { t:'Deneme sinavi yayinlandi', s:'TYT Genel Deneme #14', time:'48 dk once', ico:'file-check-2', red:false },
+  { t:'Psikolojik test tamamlandi', s:'Kaygi Olcegi · 38 ogrenci', time:'1 sa once', ico:'brain', red:false },
+  { t:'Yeni ders eklendi', s:'AYT Geometri · Ileri', time:'3 sa once', ico:'book-open', red:false },
+  { t:'Toplu ogrenci aktarimi', s:'11-B sinifi · 32 kayit', time:'Dun 16:20', ico:'upload', red:false },
+  { t:'Kurum ayari guncellendi', s:'Bildirim tercihleri', time:'Dun 09:05', ico:'settings-2', red:false },
+];
+const feed = document.getElementById('activityFeed');
+activity.forEach((a, i) => {
+  const li = document.createElement('li');
+  li.className = 'flex gap-4 py-3.5 border-b border-rule';
+  li.innerHTML = `
+    <div class="shrink-0 w-9 h-9 grid place-items-center border ${a.red?'border-red text-red':'border-rule text-ink'}">
+      <i data-lucide="${a.ico}" class="w-[16px] h-[16px]"></i>
+    </div>
+    <div class="min-w-0 flex-1">
+      <p class="font-700 tracktight text-[13.5px] leading-tight">${a.t}</p>
+      <p class="text-mute text-[12px] truncate">${a.s}</p>
+    </div>
+    <span class="shrink-0 text-[11px] text-mute font-600 num whitespace-nowrap">${a.time}</span>
+  `;
+  feed.appendChild(li);
+});
+
+// ---------- CITY LIST ----------
+const cities = [
+  { rank:'01', name:'Istanbul', v:284 },
+  { rank:'02', name:'Ankara',   v:196 },
+  { rank:'03', name:'Izmir',    v:143 },
+  { rank:'04', name:'Bursa',    v:98  },
+  { rank:'05', name:'Antalya',  v:76  },
+  { rank:'06', name:'Konya',    v:61  },
+];
+const cityMax = Math.max(...cities.map(c=>c.v));
+const cityList = document.getElementById('cityList');
+cities.forEach(c => {
+  const li = document.createElement('li');
+  li.className = 'py-2 border-b border-rule last:border-0';
+  li.innerHTML = `
+    <div class="flex items-baseline justify-between mb-1.5">
+      <span class="font-700 tracktight text-[13.5px]"><span class="text-mute font-600 mr-1.5">${c.rank}</span>${c.name}</span>
+      <span class="font-800 tracktight num">${c.v}</span>
+    </div>
+    <div class="h-[5px] bg-rule relative">
+      <div class="absolute inset-y-0 left-0 ${c.rank==='01'?'bg-red':'bg-ink'}" style="width:${Math.round(c.v/cityMax*100)}%"></div>
+    </div>
+  `;
+  cityList.appendChild(li);
+});
+
+// ---------- CHARTS (ApexCharts, Swiss palette) ----------
+const INK = '#0a0a0a', RED = '#c0392b', G1='#0a0a0a', G2='#5c5c5c', G3='#9a9a9a', G4='#cccccc';
+const baseFont = { fontFamily: '"Hanken Grotesk", sans-serif' };
+
+// Score type distribution — horizontal bar
+new ApexCharts(document.querySelector('#scoreChart'), {
+  chart: { type:'bar', height:200, width:'100%', toolbar:{show:false}, ...baseFont, animations:{speed:400} },
+  series: [{ name:'Ogrenci', data:[458, 312, 336, 134] }],
+  colors: [RED],
+  plotOptions: { bar: { horizontal:true, barHeight:'58%', borderRadius:0,
+    distributed:true, dataLabels:{position:'top'} } },
+  states: { hover:{ filter:{ type:'darken', value:0.9 } } },
+  fill: { colors:[RED, '#7a7a7a', '#a8a8a8', '#0a0a0a'] },
+  colors: [RED, '#7a7a7a', '#a8a8a8', '#0a0a0a'],
+  dataLabels: { enabled:true, offsetX:34, style:{ fontSize:'12px', fontWeight:800, colors:['#0a0a0a'], ...baseFont },
+    formatter:(v)=>v },
+  xaxis: { categories:['Sayisal','Sozel','Esit Agirlik','Dil'],
+    labels:{ show:false }, axisBorder:{show:false}, axisTicks:{show:false} },
+  yaxis: { labels:{ style:{ fontSize:'12px', fontWeight:700, colors:'#0a0a0a', ...baseFont } } },
+  grid: { borderColor:'#eee', xaxis:{lines:{show:false}}, padding:{left:8,right:40,top:0,bottom:0} },
+  legend: { show:false },
+  tooltip: { y:{ formatter:(v)=>v+' ogrenci' } },
+  responsive: [{ breakpoint: 1023, options: {
+    chart: { height: 220 },
+    dataLabels: { offsetX: 26 },
+    grid: { padding:{left:4,right:34,top:0,bottom:0} }
+  } }]
+}).render();
+
+// Grade distribution — vertical columns
+new ApexCharts(document.querySelector('#gradeChart'), {
+  chart: { type:'bar', height:210, width:'100%', toolbar:{show:false}, ...baseFont, animations:{speed:400} },
+  series: [{ name:'Ogrenci', data:[228, 264, 301, 342, 105] }],
+  plotOptions: { bar: { columnWidth:'52%', borderRadius:0, distributed:true,
+    dataLabels:{position:'top'} } },
+  colors: ['#0a0a0a','#0a0a0a','#0a0a0a','#c0392b','#9a9a9a'],
+  dataLabels: { enabled:true, offsetY:-18, style:{ fontSize:'11px', fontWeight:800, colors:['#0a0a0a'], ...baseFont } },
+  xaxis: { categories:['9. Sinif','10. Sinif','11. Sinif','12. Sinif','Mezun'],
+    labels:{ style:{ fontSize:'11px', fontWeight:700, colors:'#0a0a0a', ...baseFont } },
+    axisBorder:{ color:'#0a0a0a' }, axisTicks:{show:false} },
+  yaxis: { show:false },
+  grid: { borderColor:'#eee', yaxis:{lines:{show:true}}, padding:{top:14, left:4, right:4} },
+  legend: { show:false },
+  tooltip: { y:{ formatter:(v)=>v+' ogrenci' } },
+  responsive: [{ breakpoint: 1023, options: {
+    chart: { height: 230 },
+    plotOptions: { bar: { columnWidth:'60%' } },
+    xaxis: { labels:{ style:{ fontSize:'10px', fontWeight:700, colors:'#0a0a0a', ...baseFont } } }
+  } }]
+}).render();
+</script>
+</body>
+</html>

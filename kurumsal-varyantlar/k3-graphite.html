@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KocTakip · Yonetici Konsolu</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'monospace'],
+      },
+      fontWeight: { '400':'400', '500':'500', '600':'600', '700':'700', '800':'800', '900':'900' },
+      colors: {
+        ink: { 950:'#111316', 900:'#16181b', 850:'#1b1e22', 800:'#22262b', 750:'#282c32', 700:'#2f343a' },
+        line: { DEFAULT:'#33373d', soft:'#2a2e34' },
+        amber: { DEFAULT:'#e0a458', dim:'#a8783c' },
+        steel: { DEFAULT:'#6b93b8', dim:'#4a6885' },
+        txt: { hi:'#e8e6e1', mid:'#a6a9ae', lo:'#6c7077' },
+        ok:'#7fa676', warn:'#e0a458', bad:'#c76b5e'
+      }
+    }
+  }
+}
+</script>
+<style>
+  html,body{background:#16181b;}
+  *::-webkit-scrollbar{width:9px;height:9px}
+  *::-webkit-scrollbar-track{background:#16181b}
+  *::-webkit-scrollbar-thumb{background:#33373d;border:2px solid #16181b}
+  *::-webkit-scrollbar-thumb:hover{background:#454b52}
+  .grid-bg{background-image:linear-gradient(#ffffff05 1px,transparent 1px),linear-gradient(90deg,#ffffff05 1px,transparent 1px);background-size:22px 22px}
+  .tick{font-variant-numeric:tabular-nums}
+  .rule{background:repeating-linear-gradient(90deg,#33373d 0,#33373d 4px,transparent 4px,transparent 8px)}
+  .panel{background:#1b1e22;border:1px solid #2a2e34}
+  .navitem:hover{background:#22262b}
+  .navitem.active{background:#22262b}
+  .hatch{background-image:repeating-linear-gradient(45deg,#22262b,#22262b 6px,#1b1e22 6px,#1b1e22 12px)}
+  .apexcharts-tooltip{background:#22262b!important;border:1px solid #33373d!important;color:#e8e6e1!important;font-family:'IBM Plex Mono',monospace!important;box-shadow:none!important}
+  .apexcharts-tooltip-title{background:#282c32!important;border-bottom:1px solid #33373d!important}
+  .apexcharts-legend-text{color:#a6a9ae!important;font-family:'IBM Plex Sans'!important}
+
+  /* ============ MOBILE DRAWER (shared behavior) ============ */
+  #mobileScrim{opacity:0;pointer-events:none;transition:opacity .25s ease}
+  body.drawer-open #mobileScrim{opacity:1;pointer-events:auto}
+  /* teacher card list hidden by default (desktop uses table) */
+  #teacherCards{display:none}
+
+  /* ============ <=1023px : FULL MOBILE APP MODE (aligned with Tailwind lg) ============ */
+  @media (max-width:1023px){
+    /* full-screen: kill frame padding / rounding / margins */
+    .app-shell{min-height:100dvh}
+    /* mobile topbar visible, desktop search-header stays but restyled below */
+    #mobileTopbar{display:flex}
+
+    /* SIDEBAR becomes a left drawer */
+    aside#sidebar{
+      display:flex !important;
+      position:fixed !important;
+      top:0; left:0; bottom:0;
+      height:100dvh !important;
+      width:82vw !important; max-width:300px !important;
+      transform:translateX(-100%) !important;
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      z-index:60;
+      box-shadow:0 0 0 100vmax transparent;
+    }
+    body.drawer-open aside#sidebar{transform:translateX(0) !important}
+
+    /* main column: no left margin from fixed sidebar */
+    .main-col{margin-left:0 !important}
+
+    /* desktop header (search bar) hidden on mobile; mobile topbar replaces it */
+    #deskHeader{display:none !important}
+
+    /* full-bleed content: remove side padding */
+    .title-strip{padding-left:16px !important;padding-right:16px !important;padding-top:18px !important;padding-bottom:18px !important}
+    main.content{padding:16px !important}
+    main.content > section, main.content{margin-left:0;margin-right:0}
+
+    /* KPI: single readable column pair, larger touch spacing */
+    .kpi-cell{padding:16px !important}
+    .kpi-num{font-size:34px !important}
+
+    /* Panels edge-to-edge full width, remove side gaps that cause overflow */
+    section{gap:16px !important}
+
+    /* Teacher: hide table, show card list */
+    #teacherTableWrap{display:none !important}
+    #teacherCards{display:block !important}
+
+    /* charts full width, no horizontal overflow */
+    .apexcharts-canvas{max-width:100% !important}
+
+    /* title heading scale */
+    .title-strip h1{font-size:22px !important}
+
+    /* footer stacks */
+    footer.app-footer{flex-direction:column;align-items:flex-start;gap:10px}
+
+    /* comfortable body text minimum */
+    body{font-size:14px}
+
+    /* horizontally scrollable chip toolbar */
+    .chip-row{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .chip-row::-webkit-scrollbar{display:none}
+  }
+</style>
+</head>
+<body class="font-sans text-txt-hi antialiased">
+
+<!-- ============ MOBILE TOPBAR (mobile only) ============ -->
+<header id="mobileTopbar" class="hidden fixed top-0 inset-x-0 h-14 z-50 items-center gap-3 px-4 border-b border-line bg-ink-900/98 backdrop-blur">
+  <button id="hamburger" aria-label="Menuyu ac" class="w-10 h-10 -ml-1 flex items-center justify-center text-txt-hi active:bg-ink-800 transition">
+    <i data-lucide="menu" class="w-6 h-6"></i>
+  </button>
+  <div class="flex items-center gap-2.5 flex-1 min-w-0">
+    <div class="w-7 h-7 border border-amber flex items-center justify-center shrink-0">
+      <span class="font-mono font-600 text-amber text-[12px]">KT</span>
+    </div>
+    <div class="leading-tight min-w-0">
+      <div class="font-600 text-[13px] tracking-tight truncate">KocTakip</div>
+      <div class="font-mono text-[8px] text-txt-lo tracking-[0.2em] uppercase">Yonetici Konsolu</div>
+    </div>
+  </div>
+  <button id="mobileSearchBtn" aria-label="Ara" class="w-10 h-10 flex items-center justify-center text-txt-mid active:bg-ink-800 transition">
+    <i data-lucide="search" class="w-5 h-5"></i>
+  </button>
+  <button aria-label="Bildirimler" class="relative w-10 h-10 flex items-center justify-center text-txt-mid active:bg-ink-800 transition">
+    <i data-lucide="bell" class="w-5 h-5"></i>
+    <span class="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-amber rounded-full"></span>
+  </button>
+</header>
+
+<!-- mobile search sheet -->
+<div id="mobileSearchWrap" class="hidden fixed top-14 inset-x-0 z-40 px-4 py-3 bg-ink-900 border-b border-line">
+  <div class="relative">
+    <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-txt-lo"></i>
+    <input type="text" placeholder="Ogretmen, ogrenci veya kurum ara…" aria-label="Ara"
+      class="w-full bg-ink-850 border border-line pl-9 pr-3 py-2.5 text-[14px] text-txt-hi placeholder:text-txt-lo focus:outline-none focus:border-steel-dim transition">
+  </div>
+</div>
+
+<!-- drawer scrim -->
+<div id="mobileScrim" class="fixed inset-0 bg-black/60 z-50 lg:hidden"></div>
+
+<div class="app-shell flex min-h-screen">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside id="sidebar" class="hidden lg:flex flex-col w-60 shrink-0 border-r border-line bg-ink-900 fixed h-screen z-20">
+    <div class="h-16 flex items-center gap-3 px-5 border-b border-line">
+      <div class="w-8 h-8 border border-amber flex items-center justify-center">
+        <span class="font-mono font-600 text-amber text-sm">KT</span>
+      </div>
+      <div class="leading-tight flex-1">
+        <div class="font-600 text-[13px] tracking-tight">KocTakip</div>
+        <div class="font-mono text-[9px] text-txt-lo tracking-[0.2em] uppercase">Yonetici Konsolu</div>
+      </div>
+      <button id="drawerClose" aria-label="Menuyu kapat" class="lg:hidden w-9 h-9 -mr-1 flex items-center justify-center text-txt-mid active:bg-ink-800 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+    <div class="px-5 pt-5 pb-2">
+      <span class="font-mono text-[9px] tracking-[0.25em] uppercase text-txt-lo">Operasyon</span>
+    </div>
+    <nav class="flex flex-col px-2 gap-px text-[13px] text-txt-mid">
+      <a class="navitem active flex items-center gap-3 px-3 py-2.5 relative" href="#">
+        <span class="absolute left-0 top-1 bottom-1 w-0.5 bg-amber"></span>
+        <i data-lucide="layout-grid" class="w-4 h-4 text-amber"></i><span class="text-txt-hi font-500">Genel Bakis</span>
+      </a>
+      <a class="navitem flex items-center gap-3 px-3 py-2.5" href="#"><i data-lucide="users" class="w-4 h-4"></i>Ogretmenler</a>
+      <a class="navitem flex items-center gap-3 px-3 py-2.5" href="#"><i data-lucide="graduation-cap" class="w-4 h-4"></i>Ogrenciler</a>
+      <a class="navitem flex items-center gap-3 px-3 py-2.5" href="#"><i data-lucide="book-open" class="w-4 h-4"></i>Dersler</a>
+      <a class="navitem flex items-center gap-3 px-3 py-2.5" href="#"><i data-lucide="clipboard-list" class="w-4 h-4"></i>Odevler</a>
+      <a class="navitem flex items-center gap-3 px-3 py-2.5" href="#"><i data-lucide="file-text" class="w-4 h-4"></i>Denemeler</a>
+      <a class="navitem flex items-center gap-3 px-3 py-2.5" href="#"><i data-lucide="brain" class="w-4 h-4"></i>Psikolojik Testler</a>
+      <a class="navitem flex items-center gap-3 px-3 py-2.5" href="#"><i data-lucide="calendar-days" class="w-4 h-4"></i>Ajanda</a>
+    </nav>
+
+    <div class="px-5 pt-5 pb-2 mt-2">
+      <span class="font-mono text-[9px] tracking-[0.25em] uppercase text-txt-lo">Sistem</span>
+    </div>
+    <nav class="flex flex-col px-2 gap-px text-[13px] text-txt-mid">
+      <a class="navitem flex items-center gap-3 px-3 py-2.5" href="#"><i data-lucide="settings-2" class="w-4 h-4"></i>Kurum Ayarlari</a>
+    </nav>
+    </div>
+
+    <div class="mt-auto p-4 border-t border-line">
+      <div class="flex items-center justify-between font-mono text-[10px] text-txt-lo">
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-ok"></span>SISTEM AKTIF</span>
+        <span>v3.2.1</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main-col flex-1 lg:ml-60">
+
+    <!-- Top bar (desktop / tablet) -->
+    <header id="deskHeader" class="h-16 border-b border-line bg-ink-900/95 backdrop-blur sticky top-0 z-10 flex items-center gap-4 px-5 sm:px-8">
+      <button class="lg:hidden text-txt-mid" onclick="openDrawer()" aria-label="Menuyu ac"><i data-lucide="menu" class="w-5 h-5"></i></button>
+      <div class="relative flex-1 max-w-md">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-txt-lo"></i>
+        <input type="text" placeholder="Ogretmen, ogrenci veya kurum ara…" aria-label="Ara"
+          class="w-full bg-ink-850 border border-line pl-9 pr-3 py-2 text-[13px] text-txt-hi placeholder:text-txt-lo focus:outline-none focus:border-steel-dim transition">
+      </div>
+      <div class="flex items-center gap-1">
+        <button class="relative w-9 h-9 flex items-center justify-center text-txt-mid hover:text-txt-hi hover:bg-ink-800 transition" aria-label="Bildirimler">
+          <i data-lucide="bell" class="w-[18px] h-[18px]"></i>
+          <span class="absolute top-2 right-2 w-1.5 h-1.5 bg-amber rounded-full"></span>
+        </button>
+        <button class="w-9 h-9 flex items-center justify-center text-txt-mid hover:text-txt-hi hover:bg-ink-800 transition" aria-label="Yardim"><i data-lucide="life-buoy" class="w-[18px] h-[18px]"></i></button>
+      </div>
+      <div class="w-px h-8 bg-line"></div>
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-ink-800 border border-line flex items-center justify-center font-mono text-[11px] text-amber">SK</div>
+        <div class="hidden sm:block leading-tight">
+          <div class="text-[12px] font-500">Serkan Kaya</div>
+          <div class="font-mono text-[9px] text-txt-lo tracking-wider uppercase">Sistem Yoneticisi</div>
+        </div>
+        <i data-lucide="chevron-down" class="w-4 h-4 text-txt-lo"></i>
+      </div>
+    </header>
+
+    <!-- Title strip -->
+    <div class="title-strip px-5 sm:px-8 py-6 border-b border-line flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="font-mono text-[10px] tracking-[0.3em] uppercase text-amber">// Genel Bakis</span>
+          <span class="rule h-px w-16 opacity-60"></span>
+        </div>
+        <h1 class="text-2xl sm:text-[28px] font-700 tracking-tight leading-none">Kurum Operasyon Ozeti</h1>
+        <p class="text-txt-mid text-[13px] mt-2">Atlas Egitim Kurumlari · Tum sube ve kademe verileri</p>
+      </div>
+      <div class="text-right font-mono">
+        <div class="text-[10px] text-txt-lo tracking-wider uppercase">Son Senkronizasyon</div>
+        <div id="clock" class="text-txt-hi text-[15px] tick mt-1">01 Tem 2026 · 09:42:17</div>
+      </div>
+    </div>
+
+    <main class="content p-5 sm:p-8 space-y-6">
+
+      <!-- ===== KPI ROW (asymmetric: shared rail) ===== -->
+      <section class="panel">
+        <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-line-soft">
+          <!-- KPI 1 -->
+          <div class="kpi-cell p-5 relative">
+            <div class="flex items-center justify-between mb-4">
+              <span class="font-mono text-[10px] tracking-[0.2em] uppercase text-txt-lo">Toplam Ogretmen</span>
+              <i data-lucide="users" class="w-4 h-4 text-txt-lo"></i>
+            </div>
+            <div class="flex items-end gap-3">
+              <span class="kpi-num font-mono text-[40px] leading-none font-500 tick text-txt-hi">48</span>
+              <span class="mb-1 flex items-center gap-1 font-mono text-[11px] text-ok"><i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>+4</span>
+            </div>
+            <div class="mt-3 font-mono text-[10px] text-txt-lo">bu donem 4 yeni kayit</div>
+            <div class="mt-4 h-1 bg-ink-800"><div class="h-full bg-amber" style="width:82%"></div></div>
+          </div>
+          <!-- KPI 2 -->
+          <div class="kpi-cell p-5 relative bg-ink-850/40">
+            <div class="flex items-center justify-between mb-4">
+              <span class="font-mono text-[10px] tracking-[0.2em] uppercase text-txt-lo">Toplam Ogrenci</span>
+              <i data-lucide="graduation-cap" class="w-4 h-4 text-txt-lo"></i>
+            </div>
+            <div class="flex items-end gap-3">
+              <span class="kpi-num font-mono text-[40px] leading-none font-500 tick text-txt-hi">1.240</span>
+              <span class="mb-1 flex items-center gap-1 font-mono text-[11px] text-ok"><i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>+6,2%</span>
+            </div>
+            <div class="mt-3 font-mono text-[10px] text-txt-lo">gecen aya gore +72 ogrenci</div>
+            <div class="mt-4 h-1 bg-ink-800"><div class="h-full bg-amber" style="width:64%"></div></div>
+          </div>
+          <!-- KPI 3 -->
+          <div class="kpi-cell p-5 relative">
+            <div class="flex items-center justify-between mb-4">
+              <span class="font-mono text-[10px] tracking-[0.2em] uppercase text-txt-lo">Toplam Ders</span>
+              <i data-lucide="book-open" class="w-4 h-4 text-txt-lo"></i>
+            </div>
+            <div class="flex items-end gap-3">
+              <span class="kpi-num font-mono text-[40px] leading-none font-500 tick text-txt-hi">12</span>
+              <span class="mb-1 flex items-center gap-1 font-mono text-[11px] text-txt-mid"><i data-lucide="minus" class="w-3.5 h-3.5"></i>0</span>
+            </div>
+            <div class="mt-3 font-mono text-[10px] text-txt-lo">tanimli aktif ders dali</div>
+            <div class="mt-4 h-1 bg-ink-800"><div class="h-full bg-steel" style="width:100%"></div></div>
+          </div>
+          <!-- KPI 4 -->
+          <div class="kpi-cell p-5 relative bg-ink-850/40">
+            <div class="flex items-center justify-between mb-4">
+              <span class="font-mono text-[10px] tracking-[0.2em] uppercase text-txt-lo">Aktif Kullanici</span>
+              <i data-lucide="activity" class="w-4 h-4 text-txt-lo"></i>
+            </div>
+            <div class="flex items-end gap-3">
+              <span class="kpi-num font-mono text-[40px] leading-none font-500 tick text-txt-hi">320</span>
+              <span class="mb-1 flex items-center gap-1 font-mono text-[11px] text-bad"><i data-lucide="arrow-down-right" class="w-3.5 h-3.5"></i>-2,1%</span>
+            </div>
+            <div class="mt-3 font-mono text-[10px] text-txt-lo">son 24 saat · 25,8% oturum orani</div>
+            <div class="mt-4 h-1 bg-ink-800"><div class="h-full bg-steel" style="width:26%"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ROW: Teacher table (wide) + activity feed (narrow) ===== -->
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <!-- Teacher performance table -->
+        <div class="xl:col-span-2 panel flex flex-col">
+          <div class="flex items-center justify-between px-5 h-12 border-b border-line-soft">
+            <div class="flex items-center gap-2">
+              <i data-lucide="bar-chart-3" class="w-4 h-4 text-amber"></i>
+              <h2 class="text-[13px] font-600 tracking-tight">Ogretmen Performans Tablosu</h2>
+            </div>
+            <span class="font-mono text-[10px] text-txt-lo tracking-wider hidden sm:inline">TAMAMLANAN / ATANAN ODEV</span>
+          </div>
+          <!-- desktop / tablet table -->
+          <div id="teacherTableWrap" class="overflow-x-auto">
+            <table class="w-full text-[13px]">
+              <thead>
+                <tr class="text-left font-mono text-[10px] tracking-[0.15em] uppercase text-txt-lo border-b border-line-soft">
+                  <th class="font-500 px-5 py-3">Ad Soyad</th>
+                  <th class="font-500 px-3 py-3 text-right tick">Ogrenci</th>
+                  <th class="font-500 px-3 py-3 text-right tick">Odev</th>
+                  <th class="font-500 px-3 py-3">Tamamlama</th>
+                  <th class="font-500 px-5 py-3 text-right tick">Geciken</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line-soft" id="teacherRows"></tbody>
+            </table>
+          </div>
+          <!-- mobile card list -->
+          <div id="teacherCards" class="divide-y divide-line-soft"></div>
+
+          <div class="px-5 h-11 border-t border-line-soft flex items-center justify-between font-mono text-[10px] text-txt-lo">
+            <span>8 KAYIT · 42 TOPLAM OGRETMEN</span>
+            <a href="#" class="text-steel hover:text-amber transition flex items-center gap-1">TUMUNU GORUNTULE <i data-lucide="arrow-right" class="w-3 h-3"></i></a>
+          </div>
+        </div>
+
+        <!-- Activity feed -->
+        <div class="panel flex flex-col">
+          <div class="flex items-center gap-2 px-5 h-12 border-b border-line-soft">
+            <i data-lucide="git-commit-vertical" class="w-4 h-4 text-amber"></i>
+            <h2 class="text-[13px] font-600 tracking-tight">Son Eklenenler</h2>
+          </div>
+          <div class="p-5 space-y-0 flex-1" id="feed"></div>
+        </div>
+      </section>
+
+      <!-- ===== ROW: charts ===== -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Puan turu -->
+        <div class="panel">
+          <div class="flex items-center justify-between px-5 h-12 border-b border-line-soft">
+            <div class="flex items-center gap-2">
+              <i data-lucide="pie-chart" class="w-4 h-4 text-amber"></i>
+              <h2 class="text-[13px] font-600 tracking-tight">Puan Turu Dagilimi</h2>
+            </div>
+            <span class="font-mono text-[10px] text-txt-lo">n=1.240</span>
+          </div>
+          <div class="p-4"><div id="scoreChart"></div></div>
+        </div>
+        <!-- Sinif -->
+        <div class="panel">
+          <div class="flex items-center justify-between px-5 h-12 border-b border-line-soft">
+            <div class="flex items-center gap-2">
+              <i data-lucide="bar-chart-horizontal" class="w-4 h-4 text-amber"></i>
+              <h2 class="text-[13px] font-600 tracking-tight">Sinif Dagilimi</h2>
+            </div>
+            <span class="font-mono text-[10px] text-txt-lo">KADEME BAZLI</span>
+          </div>
+          <div class="p-4"><div id="gradeChart"></div></div>
+        </div>
+      </section>
+
+      <!-- ===== ROW: system health + map ===== -->
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <!-- System health -->
+        <div class="panel">
+          <div class="flex items-center gap-2 px-5 h-12 border-b border-line-soft">
+            <i data-lucide="heart-pulse" class="w-4 h-4 text-amber"></i>
+            <h2 class="text-[13px] font-600 tracking-tight">Sistem Sagligi</h2>
+          </div>
+          <div class="divide-y divide-line-soft">
+            <div class="flex items-center justify-between px-5 py-4">
+              <div class="flex items-center gap-3"><span class="w-2 h-2 bg-ok rounded-full"></span><span class="text-[13px]">Aktif Kullanici</span></div>
+              <span class="font-mono text-[15px] tick text-txt-hi">320</span>
+            </div>
+            <div class="flex items-center justify-between px-5 py-4">
+              <div class="flex items-center gap-3"><span class="w-2 h-2 bg-warn rounded-full"></span><span class="text-[13px]">Pasif Ogrenci</span></div>
+              <span class="font-mono text-[15px] tick text-txt-hi">148</span>
+            </div>
+            <div class="flex items-center justify-between px-5 py-4">
+              <div class="flex items-center gap-3"><span class="w-2 h-2 bg-warn rounded-full"></span><span class="text-[13px]">Pasif Ogretmen</span></div>
+              <span class="font-mono text-[15px] tick text-txt-hi">6</span>
+            </div>
+            <div class="flex items-center justify-between px-5 py-4">
+              <div class="flex items-center gap-3"><span class="w-2 h-2 bg-bad rounded-full"></span><span class="text-[13px]">Hic Giris Yapmayan</span></div>
+              <span class="font-mono text-[15px] tick text-txt-hi">37</span>
+            </div>
+          </div>
+          <div class="px-5 py-4 border-t border-line-soft">
+            <div class="flex items-center justify-between font-mono text-[10px] text-txt-lo mb-2">
+              <span>OTURUM ORANI</span><span class="text-txt-hi">25,8%</span>
+            </div>
+            <div class="h-1.5 bg-ink-800 flex">
+              <div class="h-full bg-ok" style="width:25.8%"></div>
+              <div class="h-full bg-warn/50" style="width:12.4%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAP placeholder (2 col) -->
+        <div class="panel xl:col-span-2 flex flex-col">
+          <div class="flex items-center justify-between px-5 h-12 border-b border-line-soft">
+            <div class="flex items-center gap-2">
+              <i data-lucide="map" class="w-4 h-4 text-amber"></i>
+              <h2 class="text-[13px] font-600 tracking-tight">Il Bazli Dagilim</h2>
+            </div>
+            <span class="font-mono text-[10px] text-txt-lo tracking-wider">32 IL · 1.240 OGRENCI</span>
+          </div>
+          <div class="flex-1 grid grid-cols-1 md:grid-cols-5">
+            <!-- map canvas placeholder -->
+            <div class="md:col-span-3 relative grid-bg border-b md:border-b-0 md:border-r border-line-soft min-h-[280px] flex items-center justify-center overflow-hidden">
+              <!-- corner ticks -->
+              <span class="absolute top-3 left-3 font-mono text-[9px] text-txt-lo tracking-widest">HARITA · TR</span>
+              <span class="absolute bottom-3 right-3 font-mono text-[9px] text-txt-lo tracking-widest">39.9°N 32.8°E</span>
+              <div class="absolute top-0 left-0 w-4 h-4 border-t border-l border-amber/40"></div>
+              <div class="absolute top-0 right-0 w-4 h-4 border-t border-r border-amber/40"></div>
+              <div class="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-amber/40"></div>
+              <div class="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-amber/40"></div>
+              <div class="text-center">
+                <div class="mx-auto w-14 h-14 border border-line flex items-center justify-center mb-4 hatch">
+                  <i data-lucide="map-pin" class="w-6 h-6 text-amber"></i>
+                </div>
+                <div class="font-mono text-[11px] tracking-[0.2em] uppercase text-txt-mid">Turkiye Haritasi</div>
+                <div class="font-mono text-[10px] text-txt-lo mt-1">interaktif katman yukleniyor…</div>
+              </div>
+            </div>
+            <!-- legend + top iller -->
+            <div class="md:col-span-2 p-5 flex flex-col">
+              <div class="font-mono text-[10px] tracking-[0.2em] uppercase text-txt-lo mb-3">Yogunluk Lejandi</div>
+              <div class="flex items-center gap-1 mb-1">
+                <span class="h-2 flex-1" style="background:#3a3f45"></span>
+                <span class="h-2 flex-1" style="background:#6b5a3a"></span>
+                <span class="h-2 flex-1" style="background:#a8783c"></span>
+                <span class="h-2 flex-1" style="background:#e0a458"></span>
+              </div>
+              <div class="flex justify-between font-mono text-[9px] text-txt-lo mb-5"><span>0</span><span>250+</span></div>
+
+              <div class="font-mono text-[10px] tracking-[0.2em] uppercase text-txt-lo mb-3">En Yogun Iller</div>
+              <ul class="space-y-3 flex-1" id="cityList"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="app-footer pt-4 pb-2 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] text-txt-lo border-t border-line">
+        <span>KOCTAKIP · YONETICI KONSOLU · &copy; 2026 ATLAS EGITIM</span>
+        <span class="flex items-center gap-4"><span>UPTIME 99,97%</span><span>API 42ms</span><span class="text-ok flex items-center gap-1"><span class="w-1.5 h-1.5 bg-ok rounded-full"></span>OPERASYONEL</span></span>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<script>
+// ---------- DATA ----------
+const teachers = [
+  {n:'Elif Sahin',      s:64, done:412, total:440, r:94, late:6},
+  {n:'Mehmet Yildirim', s:58, done:388, total:430, r:90, late:9},
+  {n:'Zeynep Arslan',   s:71, done:502, total:590, r:85, late:14},
+  {n:'Burak Demir',     s:49, done:301, total:388, r:78, late:22},
+  {n:'Ayse Kilic',      s:66, done:455, total:472, r:96, late:4},
+  {n:'Caner Ozturk',    s:53, done:277, total:410, r:68, late:31},
+  {n:'Selin Aydin',     s:60, done:399, total:451, r:88, late:11},
+  {n:'Emre Coskun',     s:45, done:214, total:360, r:59, late:38},
+];
+const barColor = r => r>=90 ? '#7fa676' : r>=75 ? '#e0a458' : '#c76b5e';
+const initials = n => n.split(' ').map(w=>w[0]).join('').slice(0,2);
+
+document.getElementById('teacherRows').innerHTML = teachers.map(t=>`
+  <tr class="hover:bg-ink-800/50 transition">
+    <td class="px-5 py-3">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 bg-ink-800 border border-line-soft flex items-center justify-center font-mono text-[10px] text-txt-mid shrink-0">${initials(t.n)}</div>
+        <span class="font-500 text-txt-hi">${t.n}</span>
+      </div>
+    </td>
+    <td class="px-3 py-3 text-right font-mono tick text-txt-mid">${t.s}</td>
+    <td class="px-3 py-3 text-right font-mono tick text-txt-mid">${t.done}<span class="text-txt-lo">/${t.total}</span></td>
+    <td class="px-3 py-3">
+      <div class="flex items-center gap-2">
+        <div class="w-20 h-1.5 bg-ink-800 shrink-0"><div class="h-full" style="width:${t.r}%;background:${barColor(t.r)}"></div></div>
+        <span class="font-mono tick text-[12px]" style="color:${barColor(t.r)}">%${t.r}</span>
+      </div>
+    </td>
+    <td class="px-5 py-3 text-right font-mono tick ${t.late>20?'text-bad':'text-txt-mid'}">${t.late}</td>
+  </tr>`).join('');
+
+// mobile teacher cards (same data, tap-friendly stacked layout)
+document.getElementById('teacherCards').innerHTML = teachers.map(t=>`
+  <div class="px-4 py-4 active:bg-ink-800/50 transition">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-9 h-9 bg-ink-800 border border-line-soft flex items-center justify-center font-mono text-[11px] text-txt-mid shrink-0">${initials(t.n)}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-500 text-txt-hi text-[14px] truncate">${t.n}</div>
+        <div class="font-mono text-[10px] text-txt-lo mt-0.5">${t.s} ogrenci · ${t.done}/${t.total} odev</div>
+      </div>
+      <span class="font-mono tick text-[15px] shrink-0" style="color:${barColor(t.r)}">%${t.r}</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex-1 h-1.5 bg-ink-800"><div class="h-full" style="width:${t.r}%;background:${barColor(t.r)}"></div></div>
+      <span class="font-mono text-[10px] tracking-wider uppercase ${t.late>20?'text-bad':'text-txt-lo'} shrink-0">${t.late} geciken</span>
+    </div>
+  </div>`).join('');
+
+// activity feed
+const feed = [
+  {t:'Ogretmen eklendi', d:'Elif Sahin · Matematik zumresine atandi', ago:'8 dk', ic:'user-plus', c:'#7fa676'},
+  {t:'Deneme yayinlandi', d:'TYT Genel Deneme #14 · 12. sinif', ago:'34 dk', ic:'file-text', c:'#e0a458'},
+  {t:'Psikolojik test', d:'Sinav Kaygisi Olcegi · 86 ogrenci tamamladi', ago:'1 sa', ic:'brain', c:'#6b93b8'},
+  {t:'Kurum ayari', d:'Otomatik odev hatirlatmasi aktif edildi', ago:'2 sa', ic:'settings-2', c:'#a6a9ae'},
+  {t:'Ogrenci kaydi', d:'23 yeni ogrenci · 9. sinif kayit donemi', ago:'3 sa', ic:'graduation-cap', c:'#7fa676'},
+  {t:'Odev atandi', d:'Paragraf Analizi · 4 sube · 118 ogrenci', ago:'5 sa', ic:'clipboard-list', c:'#e0a458'},
+];
+document.getElementById('feed').innerHTML = feed.map((f,i)=>`
+  <div class="flex gap-3 ${i<feed.length-1?'pb-4':''}">
+    <div class="flex flex-col items-center">
+      <div class="w-7 h-7 border border-line-soft flex items-center justify-center shrink-0 bg-ink-850"><i data-lucide="${f.ic}" class="w-3.5 h-3.5" style="color:${f.c}"></i></div>
+      ${i<feed.length-1?'<div class="w-px flex-1 bg-line-soft mt-1"></div>':''}
+    </div>
+    <div class="pb-1 min-w-0">
+      <div class="flex items-baseline justify-between gap-2">
+        <span class="text-[12px] font-500 text-txt-hi truncate">${f.t}</span>
+        <span class="font-mono text-[9px] text-txt-lo shrink-0">${f.ago}</span>
+      </div>
+      <p class="text-[11px] text-txt-mid leading-snug mt-0.5">${f.d}</p>
+    </div>
+  </div>`).join('');
+
+// cities
+const cities = [
+  {c:'Istanbul', v:312, p:100},
+  {c:'Ankara',   v:198, p:63},
+  {c:'Izmir',    v:154, p:49},
+  {c:'Bursa',    v:96,  p:31},
+  {c:'Konya',    v:78,  p:25},
+  {c:'Antalya',  v:64,  p:20},
+];
+document.getElementById('cityList').innerHTML = cities.map((c,i)=>`
+  <li class="flex items-center gap-3">
+    <span class="font-mono text-[10px] text-txt-lo w-4">${String(i+1).padStart(2,'0')}</span>
+    <span class="text-[12px] text-txt-hi w-16 shrink-0">${c.c}</span>
+    <div class="flex-1 h-1.5 bg-ink-800"><div class="h-full bg-amber" style="width:${c.p}%"></div></div>
+    <span class="font-mono tick text-[12px] text-txt-mid w-8 text-right">${c.v}</span>
+  </li>`).join('');
+
+// ---------- CHARTS ----------
+const baseChart = { chart:{ background:'transparent', fontFamily:'IBM Plex Sans', toolbar:{show:false}, animations:{speed:400} },
+  theme:{mode:'dark'}, grid:{borderColor:'#2a2e34'}, tooltip:{theme:'dark'} };
+
+// Puan turu - donut with hard steel/amber tones
+new ApexCharts(document.getElementById('scoreChart'), {
+  ...baseChart,
+  chart:{...baseChart.chart, type:'donut', height:280},
+  series:[430, 298, 372, 140],
+  labels:['Sayisal','Sozel','Esit Agirlik','Dil'],
+  colors:['#e0a458','#6b93b8','#a8783c','#4a6885'],
+  stroke:{colors:['#1b1e22'], width:2},
+  dataLabels:{enabled:true, style:{fontFamily:'IBM Plex Mono', fontSize:'11px', fontWeight:500, colors:['#16181b']}, dropShadow:{enabled:false},
+    formatter:(v)=>Math.round(v)+'%'},
+  legend:{position:'bottom', fontSize:'12px', labels:{colors:'#a6a9ae'}, markers:{width:9,height:9,radius:0}, itemMargin:{horizontal:10}},
+  plotOptions:{pie:{donut:{size:'62%', labels:{show:true,
+    total:{show:true, label:'TOPLAM', fontFamily:'IBM Plex Mono', fontSize:'10px', color:'#6c7077',
+      formatter:()=>'1.240'},
+    value:{fontFamily:'IBM Plex Mono', fontSize:'22px', color:'#e8e6e1'},
+    name:{fontFamily:'IBM Plex Mono', fontSize:'10px', color:'#6c7077'}}}}},
+  tooltip:{y:{formatter:(v)=>v+' ogrenci'}},
+  responsive:[{ breakpoint:768, options:{ chart:{height:260}, legend:{fontSize:'11px', itemMargin:{horizontal:7, vertical:2}} } }]
+}).render();
+
+// Sinif dagilimi - horizontal bars
+new ApexCharts(document.getElementById('gradeChart'), {
+  ...baseChart,
+  chart:{...baseChart.chart, type:'bar', height:280},
+  series:[{ name:'Ogrenci', data:[286, 271, 258, 312, 113] }],
+  colors:['#e0a458'],
+  plotOptions:{bar:{horizontal:true, barHeight:'58%', borderRadius:0, distributed:true, dataLabels:{position:'top'}}},
+  dataLabels:{enabled:true, offsetX:34, style:{fontFamily:'IBM Plex Mono', fontSize:'11px', colors:['#a6a9ae']}},
+  colors:['#4a6885','#6b93b8','#a8783c','#e0a458','#3a3f45'],
+  xaxis:{ categories:['9. Sinif','10. Sinif','11. Sinif','12. Sinif','Mezun'],
+    labels:{style:{colors:'#6c7077', fontFamily:'IBM Plex Mono', fontSize:'10px'}},
+    axisBorder:{color:'#33373d'}, axisTicks:{color:'#33373d'} },
+  yaxis:{ labels:{style:{colors:'#a6a9ae', fontFamily:'IBM Plex Sans', fontSize:'12px'}} },
+  grid:{borderColor:'#2a2e34', xaxis:{lines:{show:true}}, yaxis:{lines:{show:false}}},
+  legend:{show:false},
+  tooltip:{y:{formatter:(v)=>v+' ogrenci'}},
+  responsive:[{ breakpoint:768, options:{ chart:{height:260}, dataLabels:{offsetX:24, style:{fontSize:'10px'}}, yaxis:{labels:{style:{fontSize:'11px'}}} } }]
+}).render();
+
+// clock
+function tick(){
+  const d=new Date();
+  const ay=['Oca','Sub','Mar','Nis','May','Haz','Tem','Agu','Eyl','Eki','Kas','Ara'];
+  const p=n=>String(n).padStart(2,'0');
+  document.getElementById('clock').textContent=`${p(d.getDate())} ${ay[d.getMonth()]} ${d.getFullYear()} · ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+tick(); setInterval(tick,1000);
+
+// ---------- MOBILE DRAWER ----------
+function openDrawer(){ document.body.classList.add('drawer-open'); }
+function closeDrawer(){ document.body.classList.remove('drawer-open'); }
+document.getElementById('hamburger').addEventListener('click', openDrawer);
+document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+document.getElementById('mobileScrim').addEventListener('click', closeDrawer);
+// close when tapping any sidebar nav item (mobile UX)
+document.querySelectorAll('#sidebar .navitem').forEach(a=>a.addEventListener('click', ()=>{
+  if(window.matchMedia('(max-width:1023px)').matches) closeDrawer();
+}));
+// close on escape
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+// reset drawer when leaving mobile
+window.matchMedia('(min-width:1024px)').addEventListener('change', e=>{ if(e.matches) closeDrawer(); });
+
+// ---------- MOBILE SEARCH TOGGLE ----------
+const searchWrap = document.getElementById('mobileSearchWrap');
+document.getElementById('mobileSearchBtn').addEventListener('click', ()=>{
+  const open = searchWrap.classList.toggle('hidden')===false;
+  if(open){ const inp = searchWrap.querySelector('input'); if(inp) inp.focus(); }
+});
+
+lucide.createIcons();
+</script>
+</body>
+</html>
